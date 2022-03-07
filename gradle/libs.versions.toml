@@ -1,0 +1,26 @@
+[versions]
+kafka = "3.1.0"
+kotlinxCore = "1.5.2"
+kotlinxCli = "0.3.3"
+kotlinxDateTime = "0.3.0"
+kotlinLogging = "2.0.11"
+logback = "1.2.3"
+
+pluginNexusPublishPlugin = "1.1.0"
+
+[libraries]
+kafka = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
+kotlinLogging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlinLogging" }
+kotlinx-cli = { module = "org.jetbrains.kotlinx:kotlinx-cli-jvm", version.ref = "kotlinxCli" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCore" }
+kotlinx-coroutines-jdk8 = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8", version.ref = "kotlinxCore" }
+kotlinx-coroutines-reactive = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive", version.ref = "kotlinxCore" }
+logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+[plugins]
+publish-nexus = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "pluginNexusPublishPlugin" }
+
+[bundles]
+logback = ["logback-core", "logback-classic"]
+kotlinxCoroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-jdk8", "kotlinx-coroutines-reactive"]
