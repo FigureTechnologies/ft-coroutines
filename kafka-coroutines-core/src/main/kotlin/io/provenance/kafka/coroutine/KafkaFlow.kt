@@ -16,7 +16,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
-import kotlinx.coroutines.channels.SendChannel
 
 /**
  *
