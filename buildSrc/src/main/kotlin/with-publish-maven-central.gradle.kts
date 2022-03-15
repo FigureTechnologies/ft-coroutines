@@ -100,6 +100,18 @@ subprojects {
                             name.set("Wyatt Baker")
                             email.set("wbaker@figure.com")
                         }
+
+                        developer {
+                            id.set("rchaing-figure")
+                            name.set("Robert Chaing")
+                            email.set("rchaing@figure.com")
+                        }
+
+                        developer {
+                            id.set("jhorecny-figure")
+                            name.set("Josh Horecny")
+                            email.set("jhorecny@figure.com")
+                        }
                     }
 
                     scm {
