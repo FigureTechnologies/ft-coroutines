@@ -1,16 +1,16 @@
 plugins {
     kotlin("jvm")
 
-	`java-library`
+    `java-library`
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
     implementation(libs.kafka)
-	implementation(libs.kotlinLogging)
-	implementation(libs.bundles.logback)
-	implementation(libs.bundles.kotlinxCoroutines)
+    implementation(libs.kotlinLogging)
+    implementation(libs.bundles.logback)
+    implementation(libs.bundles.kotlinxCoroutines)
 }

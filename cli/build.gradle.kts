@@ -1,23 +1,22 @@
 plugins {
-	kotlin("jvm")
-	application
+    kotlin("jvm")
+    application
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation(projects.kafkaCoroutinesCore)
+    implementation(projects.kafkaCoroutinesCore)
+    implementation(libs.bundles.logback)
+    implementation(libs.bundles.kotlinxCoroutines)
 
-	implementation(libs.bundles.logback)
-	implementation(libs.bundles.kotlinxCoroutines)
-
-	implementation(libs.kafka)
-	implementation(libs.kotlinLogging)
-	implementation(libs.kotlinx.cli)
+    implementation(libs.kafka)
+    implementation(libs.kotlinLogging)
+    implementation(libs.kotlinx.cli)
 }
 
 application {
-	mainClass.set("io.provenance.kafka.cli.MainKt")
+    mainClass.set("io.provenance.kafka.cli.MainKt")
 }
