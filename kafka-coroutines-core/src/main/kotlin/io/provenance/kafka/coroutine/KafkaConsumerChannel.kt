@@ -21,7 +21,7 @@ import kotlin.concurrent.thread
  *
  */
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
-fun <K, V> kafkaChannel(
+fun <K, V> kafkaConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
     name: String = "kafka-channel",
@@ -29,7 +29,7 @@ fun <K, V> kafkaChannel(
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
 ): ReceiveChannel<UnAckedConsumerRecord<K, V>> {
-    return KafkaChannel(consumerProperties, topics, name, pollInterval, consumer, init).also {
+    return KafkaConsumerChannel(consumerProperties, topics, name, pollInterval, consumer, init).also {
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 it.cancel()
@@ -41,7 +41,7 @@ fun <K, V> kafkaChannel(
 /**
  *
  */
-open class KafkaChannel<K, V>(
+open class KafkaConsumerChannel<K, V>(
     consumerProperties: Map<String, Any>,
     topics: Set<String> = emptySet(),
     name: String = "kafka-channel",
