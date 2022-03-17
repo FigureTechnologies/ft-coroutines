@@ -1,11 +1,13 @@
 package io.provenance.kafka.coroutine
 
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
 
-interface AckedConsumerRecord<K, V> {
-    val record: ConsumerRecord<K, V>
+interface AckedConsumerRecord<K, V> : KafkaRecord<K, V> {
+    val metadata: OffsetAndMetadata
 }
 
 class AckedConsumerRecordImpl<K, V>(
-    override val record: ConsumerRecord<K, V>
-) : AckedConsumerRecord<K, V>
+    record: ConsumerRecord<K, V>,
+    override val metadata: OffsetAndMetadata
+) : AckedConsumerRecord<K, V>, KafkaRecord<K, V> by wrapping(record)

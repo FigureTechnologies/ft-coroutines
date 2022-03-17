@@ -1,9 +1,9 @@
 package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
-import io.provenance.kafka.coroutine.acking
-import io.provenance.kafka.coroutine.kafkaChannel
-import io.provenance.kafka.coroutine.onEachToTopic
+import io.provenance.kafka.coroutine.kafkaConsumerChannel
+import io.provenance.kafka.coroutine.kafkaProducerChannel
+import java.time.OffsetDateTime
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -13,13 +13,13 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.selects.select
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -44,7 +44,7 @@ fun main(args: Array<String>) {
     parser.parse(args)
 
     val commonProps = mapOf<String, Any>(
-        CommonClientConfigs.GROUP_ID_CONFIG to group,
+        CommonClientConfigs.GROUP_ID_CONFIG to group + OffsetDateTime.now().minute,
         CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to broker,
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
@@ -54,26 +54,64 @@ fun main(args: Array<String>) {
 
     logger("org.apache.kafka").level = Level.WARN
 
-    val incoming = kafkaChannel<String, String>(commonProps, setOf(source))
-        .receiveAsFlow()
-        .buffer()
+    val incoming = kafkaConsumerChannel<String, String>(commonProps, setOf(source))
+    val producer = kafkaProducerChannel<String, String>(commonProps)
 
     runBlocking {
-        launch(Dispatchers.IO) {
-            incoming.onEachToTopic(commonProps) { ProducerRecord(dest, it.key(), it.value()) }
-                .buffer()
-                .acking {
-                    logger("main").info("acking record: ${it.key()} // ${it.value()}")
-                }
-                .collect()
-        }
+
+        //
+        // Using select
+        //
 
         launch(Dispatchers.IO) {
+            val ticker = ticker(5000)
+            val i = AtomicInteger(100)
+
+            while (true) {
+                select<Unit> {
+                    incoming.onReceive {
+                        logger("main").info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
+
+                        val rec = it
+                        producer.onSend(ProducerRecord(dest, it.key, it.value)) {
+                            val ack = rec.ack()
+                            logger("main").info("post-commit: ${ack.key} // ${ack.value} @ ${rec.offset}")
+                        }
+                    }
+
+                    // Periodically send messages to kafka so we have something to consumer in the other coroutine above.
+                    ticker.onReceive {
+                        logger("main").info("ticker")
+                        producer.send(ProducerRecord(source, dest, "test-${i.getAndIncrement()}"))
+                    }
+                }
+            }
+        }
+
+        //
+        //    OR
+        //
+
+        //
+        // Using flows
+        //
+
+        launch(Dispatchers.IO) {
+            incoming.receiveAsFlow().buffer().onEach {
+                logger("main").info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
+                producer.send(ProducerRecord(dest, it.key, it.value))
+                val ack = it.ack()
+                logger("main").info("post-commit: ${ack.key} // ${ack.value} @ ${it.offset}")
+            }.collect()
+        }
+
+        // Periodically send messages to kafka so we have something to consumer in the other coroutine above.
+        launch(Dispatchers.IO) {
+            val ticker = ticker(5000)
             val i = AtomicInteger(0)
-            val producer = KafkaProducer<String, String>(commonProps)
-            ticker(5000).receiveAsFlow().map {
+            ticker.receiveAsFlow().onEach {
                 logger("main").info("ticker")
-                producer.send(ProducerRecord(source, "test", "test-${i.getAndIncrement()}")).get()
+                producer.send(ProducerRecord(source, dest, "test-${i.getAndIncrement()}"))
             }.collect()
         }
     }

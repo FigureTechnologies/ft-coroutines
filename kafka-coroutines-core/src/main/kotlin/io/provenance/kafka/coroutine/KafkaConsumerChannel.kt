@@ -1,5 +1,8 @@
 package io.provenance.kafka.coroutine
 
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -13,15 +16,12 @@ import kotlinx.coroutines.selects.SelectClause1
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import java.time.Duration
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 
 /**
  *
  */
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
-fun <K, V> kafkaChannel(
+fun <K, V> kafkaConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
     name: String = "kafka-channel",
@@ -29,7 +29,7 @@ fun <K, V> kafkaChannel(
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
 ): ReceiveChannel<UnAckedConsumerRecord<K, V>> {
-    return KafkaChannel(consumerProperties, topics, name, pollInterval, consumer, init).also {
+    return KafkaConsumerChannel(consumerProperties, topics, name, pollInterval, consumer, init).also {
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 it.cancel()
@@ -41,7 +41,7 @@ fun <K, V> kafkaChannel(
 /**
  *
  */
-open class KafkaChannel<K, V>(
+open class KafkaConsumerChannel<K, V>(
     consumerProperties: Map<String, Any>,
     topics: Set<String> = emptySet(),
     name: String = "kafka-channel",
@@ -96,6 +96,7 @@ open class KafkaChannel<K, V>(
                                 val it = ackChannel.receive()
                                 log.info { "ack(${it.duration.toMillis()}ms):${it.asCommitable()}" }
                                 consumer.commitSync(it.asCommitable())
+                                it.commitAck.send(Unit)
                             }
                         }
                     }
@@ -129,9 +130,15 @@ open class KafkaChannel<K, V>(
 
     @ExperimentalCoroutinesApi
     override val isEmpty: Boolean = sendChannel.isEmpty
-    override val onReceive: SelectClause1<UnAckedConsumerRecord<K, V>> = sendChannel.onReceive
-    override val onReceiveCatching: SelectClause1<ChannelResult<UnAckedConsumerRecord<K, V>>> =
-        sendChannel.onReceiveCatching
+    override val onReceive: SelectClause1<UnAckedConsumerRecord<K, V>> get() {
+        start()
+        return sendChannel.onReceive
+    }
+
+    override val onReceiveCatching: SelectClause1<ChannelResult<UnAckedConsumerRecord<K, V>>> get() {
+        start()
+        return sendChannel.onReceiveCatching
+    }
 
     override fun cancel(cause: Throwable?): Boolean {
         cancel(CancellationException("cancel", cause))

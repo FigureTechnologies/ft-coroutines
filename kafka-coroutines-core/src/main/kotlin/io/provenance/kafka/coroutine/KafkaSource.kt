@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 
 open class KafkaSource<K, V>(consumerProps: Map<String, Any>, topic: String) {
 
-    private val incoming = kafkaChannel<K, V>(consumerProps, setOf(topic))
+    private val incoming = kafkaConsumerChannel<K, V>(consumerProps, setOf(topic))
 
     fun beginFlow(): Flow<UnAckedConsumerRecordImpl<K, V>> {
         return incoming.receiveAsFlow().map { it as UnAckedConsumerRecordImpl<K, V> }
