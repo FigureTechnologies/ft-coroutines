@@ -10,7 +10,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.selects.SelectClause2
+import kotlinx.coroutines.selects.SelectInstance
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -18,62 +20,82 @@ import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 
 fun <K, V> kafkaProducerChannel(
-	producerProps: Map<String, Any>,
-	producer: Producer<K, V> = KafkaProducer(producerProps)
+    producerProps: Map<String, Any>,
+    producer: Producer<K, V> = KafkaProducer(producerProps)
 ): SendChannel<ProducerRecord<K, V>> = KafkaProducerChannel(producer)
 
 @OptIn(ExperimentalTime::class)
 val DEFAULT_SEND_TIMEOUT = 10.seconds
 
 open class KafkaProducerChannel<K, V>(private val producer: Producer<K, V>) : SendChannel<ProducerRecord<K, V>> {
-	private val log = KotlinLogging.logger {}
+    private val log = KotlinLogging.logger {}
 
-	private val closed = AtomicBoolean(false)
+    private val closed = AtomicBoolean(false)
 
-	@ExperimentalCoroutinesApi
-	override val isClosedForSend: Boolean = closed.get()
+    @ExperimentalCoroutinesApi
+    override val isClosedForSend: Boolean = closed.get()
 
-	override val onSend: SelectClause2<ProducerRecord<K, V>, SendChannel<ProducerRecord<K, V>>>
-		get() { TODO() }
+    override val onSend: SelectClause2<ProducerRecord<K, V>, SendChannel<ProducerRecord<K, V>>>
+        get() {
+            val parent: SendChannel<ProducerRecord<K, V>> = this
+            return object : SelectClause2<ProducerRecord<K, V>, SendChannel<ProducerRecord<K, V>>> {
+                @InternalCoroutinesApi
+                override fun <R> registerSelectClause2(
+                    select: SelectInstance<R>,
+                    param: ProducerRecord<K, V>,
+                    block: suspend (SendChannel<ProducerRecord<K, V>>) -> R
+                ) {
+                    if (!select.isSelected) {
+                        return
+                    }
 
-	override fun close(cause: Throwable?): Boolean {
-		if (closed.get()) {
-			return true
-		}
+                    sendOne(param)
+                    runBlocking {
+                        block(parent)
+                    }
+                }
+            }
+        }
 
-		return runCatching {
-			producer.close()
-			closed.set(true)
-			true
-		}.getOrDefault(false)
-	}
+    override fun close(cause: Throwable?): Boolean {
+        if (closed.get()) {
+            return true
+        }
 
-	@ExperimentalCoroutinesApi
-	override fun invokeOnClose(handler: (cause: Throwable?) -> Unit) {}
+        return runCatching {
+            producer.close()
+            closed.set(true)
+            true
+        }.getOrDefault(false)
+    }
 
-	override suspend fun send(element: ProducerRecord<K, V>) {
-		if (closed.get()) {
-			throw RuntimeException("closed")
-		}
+    @ExperimentalCoroutinesApi
+    override fun invokeOnClose(handler: (cause: Throwable?) -> Unit) {
+    }
 
-		withContext(Dispatchers.IO) {
-			sendOne(element)
-		}
-	}
+    override suspend fun send(element: ProducerRecord<K, V>) {
+        if (closed.get()) {
+            throw RuntimeException("closed")
+        }
 
-	private fun sendOne(record: ProducerRecord<K, V>, timeout: Duration = DEFAULT_SEND_TIMEOUT) {
-		val meta = producer.send(record).get(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
-		log.info("successfully sent ${meta.serializedValueSize()} ${meta.topic()}-${meta.partition()}@${meta.offset()}")
-	}
+        withContext(Dispatchers.IO) {
+            sendOne(element)
+        }
+    }
 
-	@OptIn(InternalCoroutinesApi::class)
-	override fun trySend(element: ProducerRecord<K, V>): ChannelResult<Unit> {
-		return try {
-			sendOne(element)
-			ChannelResult.success(Unit)
-		} catch (e: Throwable) {
-			close(e)
-			ChannelResult.failure()
-		}
-	}
+    private fun sendOne(record: ProducerRecord<K, V>, timeout: Duration = DEFAULT_SEND_TIMEOUT) {
+        val meta = producer.send(record).get(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+        log.debug { "sent ${meta.serializedValueSize()} ${meta.topic()}-${meta.partition()}@${meta.offset()}" }
+    }
+
+    @OptIn(InternalCoroutinesApi::class)
+    override fun trySend(element: ProducerRecord<K, V>): ChannelResult<Unit> {
+        return try {
+            sendOne(element)
+            ChannelResult.success(Unit)
+        } catch (e: Throwable) {
+            close(e)
+            ChannelResult.failure()
+        }
+    }
 }
