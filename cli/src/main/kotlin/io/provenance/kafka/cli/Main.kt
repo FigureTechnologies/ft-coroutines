@@ -79,6 +79,7 @@ fun main(args: Array<String>) {
                         }
                     }
 
+                    // Periodically send messages to kafka so we have something to consumer in the other coroutine above.
                     ticker.onReceive {
                         logger("main").info("ticker")
                         producer.send(ProducerRecord(source, dest, "test-${i.getAndIncrement()}"))
@@ -86,6 +87,10 @@ fun main(args: Array<String>) {
                 }
             }
         }
+
+        //
+        //    OR
+        //
 
         //
         // Using flows
@@ -100,6 +105,7 @@ fun main(args: Array<String>) {
             }.collect()
         }
 
+        // Periodically send messages to kafka so we have something to consumer in the other coroutine above.
         launch(Dispatchers.IO) {
             val ticker = ticker(5000)
             val i = AtomicInteger(0)
