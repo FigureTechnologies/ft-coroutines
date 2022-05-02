@@ -1,7 +1,9 @@
 package io.provenance.kafka.coroutine
 
+import java.util.Optional
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.header.Header
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.record.TimestampType
 
 interface KafkaRecord<K, V> {
@@ -16,6 +18,22 @@ interface KafkaRecord<K, V> {
     val leaderEpoch: Int?
     val serializedKeySize: Int
     val serializedValueSize: Int
+
+    fun toConsumerRecord(): ConsumerRecord<K, V> {
+        return ConsumerRecord(
+            topic,
+            partition,
+            offset,
+            timestamp,
+            timestampType,
+            serializedKeySize,
+            serializedValueSize,
+            key,
+            value,
+            RecordHeaders(headers),
+            leaderEpoch.toOptional()
+        )
+    }
 }
 
 internal fun <K, V> wrapping(consumerRecord: ConsumerRecord<K, V>): KafkaRecord<K, V> {
@@ -33,3 +51,7 @@ internal fun <K, V> wrapping(consumerRecord: ConsumerRecord<K, V>): KafkaRecord<
         override val serializedValueSize: Int = consumerRecord.serializedValueSize()
     }
 }
+
+private fun Int?.toOptional(): Optional<Int> =
+    if (this == null) Optional.empty()
+    else Optional.of(this)

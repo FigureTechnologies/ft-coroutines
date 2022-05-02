@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
 import kotlinx.coroutines.channels.ChannelResult
@@ -18,9 +17,16 @@ import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.KafkaConsumer
 
 /**
+ * Create a [ReceiveChannel] for unacknowledged consumer records from kafka.
  *
+ * @param consumerProperties Kafka consumer settings for this channel.
+ * @param topics Topics to subscribe to. Can be overridden via custom `init` parameter.
+ * @param name The thread pool's base name for this consumer.
+ * @param pollInterval Interval for kafka consumer [Consumer.poll] method calls.
+ * @param consumer The instantiated [Consumer] to use to receive from kafka.
+ * @param init Callback for initializing the [Consumer].
+ * @return A non-running [KafkaConsumerChannel] instance that must be started via [KafkaConsumerChannel.start].
  */
-@OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 fun <K, V> kafkaConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
@@ -39,7 +45,17 @@ fun <K, V> kafkaConsumerChannel(
 }
 
 /**
+ * Kafka [Consumer] object implementing the [ReceiveChannel] methods.
  *
+ * Note: Must operate in a bound thread context regardless of coroutine assignment due to internal kafka threading
+ * limitations for poll fetches, acknowledgements, and sends.
+ *
+ * @param consumerProperties Kafka consumer settings for this channel.
+ * @param topics Topics to subscribe to. Can be overridden via custom `init` parameter.
+ * @param name The thread pool's base name for this consumer.
+ * @param pollInterval Interval for kafka consumer [Consumer.poll] method calls.
+ * @param consumer The instantiated [Consumer] to use to receive from kafka.
+ * @param init Callback for initializing the [Consumer].
  */
 open class KafkaConsumerChannel<K, V>(
     consumerProperties: Map<String, Any>,
@@ -58,7 +74,6 @@ open class KafkaConsumerChannel<K, V>(
         thread(name = "$name-${threadCounter.getAndIncrement()}", block = { run() }, isDaemon = true, start = false)
     private val sendChannel = Channel<UnAckedConsumerRecord<K, V>>(Channel.UNLIMITED)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     private inline fun <T> Channel<T>.use(block: (Channel<T>) -> Unit) {
         try {
             block(this)
@@ -94,7 +109,7 @@ open class KafkaConsumerChannel<K, V>(
                             val count = AtomicInteger(polledCount)
                             while (count.getAndDecrement() > 0) {
                                 val it = ackChannel.receive()
-                                log.info { "ack(${it.duration.toMillis()}ms):${it.asCommitable()}" }
+                                log.debug { "ack(${it.duration.toMillis()}ms):${it.asCommitable()}" }
                                 consumer.commitSync(it.asCommitable())
                                 it.commitAck.send(Unit)
                             }

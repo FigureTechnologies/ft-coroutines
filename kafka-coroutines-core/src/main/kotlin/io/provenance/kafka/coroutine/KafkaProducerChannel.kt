@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -19,14 +18,30 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 
+/**
+ *
+ */
+val DEFAULT_SEND_TIMEOUT = 10.seconds
+
+/**
+ * Create a [SendChannel] for producer records to send to kafka.
+ *
+ * @param producerProps Kafka producer settings for this channel.
+ * @param producer The instantiated [Producer] to use to send to kafka.
+ * @return A [KafkaProducerChannel] instance to use to send [ProducerRecord] to Kafka.
+ */
 fun <K, V> kafkaProducerChannel(
     producerProps: Map<String, Any>,
     producer: Producer<K, V> = KafkaProducer(producerProps)
 ): SendChannel<ProducerRecord<K, V>> = KafkaProducerChannel(producer)
 
-@OptIn(ExperimentalTime::class)
-val DEFAULT_SEND_TIMEOUT = 10.seconds
-
+/**
+ * Kafka [Producer] object implementing the [SendChannel] methods.
+ *
+ * Note: This object is thread and coroutine safe and can operate from either.
+ *
+ * @param producer The instantiated [Producer] to use to send to kafka.
+ */
 open class KafkaProducerChannel<K, V>(private val producer: Producer<K, V>) : SendChannel<ProducerRecord<K, V>> {
     private val log = KotlinLogging.logger {}
 
@@ -85,7 +100,7 @@ open class KafkaProducerChannel<K, V>(private val producer: Producer<K, V>) : Se
 
     private fun sendOne(record: ProducerRecord<K, V>, timeout: Duration = DEFAULT_SEND_TIMEOUT) {
         val meta = producer.send(record).get(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
-        log.debug { "sent ${meta.serializedValueSize()} ${meta.topic()}-${meta.partition()}@${meta.offset()}" }
+        log.debug { "sent ${meta.serializedValueSize()} bytes to ${meta.topic()}-${meta.partition()}@${meta.offset()}" }
     }
 
     @OptIn(InternalCoroutinesApi::class)
