@@ -17,15 +17,6 @@ interface UnAckedConsumerRecord<K, V> : KafkaRecord<K, V> {
      * @return The [AckedConsumerRecord].
      */
     suspend fun ack(): AckedConsumerRecord<K, V>
-
-//    /**
-//     * Internal use only.
-//     *
-//     * Converts the value of this record over to a different type.
-//     * @param block Lambda to convert the value into an [R] with associated size.
-//     * @return The new unacknowledged kafka record wrapper.
-//     */
-//    fun <R> withValue(block: (ConsumerRecord<K, V>) -> Pair<R, Int>): UnAckedConsumerRecord<K, R>
 }
 
 /**
@@ -40,11 +31,6 @@ class UnAckedConsumerRecordImpl<K, V>(
     private val channel: SendChannel<CommitConsumerRecord>,
     private val start: Long
 ) : UnAckedConsumerRecord<K, V>, KafkaRecord<K, V> by wrapping(record) {
-
-//    override fun <R> withValue(block: (ConsumerRecord<K, V>) -> Pair<R, Int>): UnAckedConsumerRecord<K, R> {
-//        val newRecord = record.withValue { block(record) }
-//        return UnAckedConsumerRecordImpl(newRecord, channel, start)
-//    }
 
     override suspend fun ack(): AckedConsumerRecord<K, V> {
         val tp = TopicPartition(record.topic(), record.partition())
@@ -72,26 +58,3 @@ class UnAckedConsumerRecordImpl<K, V>(
             value:$value)
         """.trimIndent().split('\n').joinToString { it.trim() }
 }
-
-///**
-// * Copy a [ConsumerRecord], and update the value with newValue.
-// *
-// * @param newValue Lambda to create the new value from the old value, and associated size.
-// * @return New [ConsumerRecord] containing the new value, and the rest of the old information.
-// */
-//fun <K, V, R> ConsumerRecord<K, V>.withValue(newValue: (V) -> Pair<R, Int>): ConsumerRecord<K, R> {
-//    val (newV, size) = newValue(value())
-//    return ConsumerRecord(
-//        topic(),
-//        partition(),
-//        offset(),
-//        timestamp(),
-//        timestampType(),
-//        serializedKeySize(),
-//        size,
-//        key(),
-//        newV,
-//        headers(),
-//        leaderEpoch()
-//    )
-//}

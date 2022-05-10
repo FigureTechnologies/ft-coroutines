@@ -4,37 +4,53 @@ import java.time.OffsetDateTime
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
-fun <K, V> inMemoryRWStore(data: MutableList<ConsumerRecordRetry<K, V>> = mutableListOf()): ConsumerRecordStore<K, V> {
-    return object : ConsumerRecordStore<K, V> {
-        private val log = KotlinLogging.logger {}
-
-        override suspend fun selectForUpdate(lastAttempted: OffsetDateTime, attemptRange: IntRange) =
-            data.filter { it.attempt in attemptRange && it.lastAttempted.isBefore(lastAttempted) }
-                .sortedBy { it.consumerRecord.timestamp() }
-
-        override suspend fun getOne(consumerRecord: ConsumerRecord<K, V>): ConsumerRecordRetry<K, V>? {
-            return data.firstOrNull(recordMatches(consumerRecord))
+internal fun <K, V> recordMatches(other: ConsumerRecord<K, V>): (RetryRecord<ConsumerRecord<K, V>>) -> Boolean {
+    return {
+        with(it.data) {
+            key() == other.key() &&
+                value() == other.value() &&
+                topic() == other.topic() &&
+                partition() == other.partition()
         }
+    }
+}
 
-        override suspend fun putOne(
-            consumerRecord: ConsumerRecord<K, V>,
-            mutator: (ConsumerRecordRetry<K, V>) -> ConsumerRecordRetry<K, V>
-        ) {
-            val record = getOne(consumerRecord)
-            if (record == null) {
-                data += ConsumerRecordRetry(consumerRecord).also {
-                    log.debug { "putting new entry for $it" }
-                }
-                return
+fun <K, V> inMemoryRWStore(data: MutableList<RetryRecord<ConsumerRecord<K, V>>> = mutableListOf()) = object : RetryRecordStore<ConsumerRecord<K, V>> {
+    val log = KotlinLogging.logger {}
+
+    override suspend fun select(
+        attemptRange: IntRange,
+        lastAttempted: OffsetDateTime
+    ): List<RetryRecord<ConsumerRecord<K, V>>> {
+        return data
+            .filter { it.attempt in attemptRange && it.lastAttempted.isBefore(lastAttempted) }
+            .sortedBy { it.data.timestamp() }
+    }
+
+    override suspend fun getOne(
+        item: ConsumerRecord<K, V>
+    ): RetryRecord<ConsumerRecord<K, V>>? {
+        return data.firstOrNull(recordMatches(item))
+    }
+
+    override suspend fun putOne(
+        item: ConsumerRecord<K, V>,
+        mutator: (RetryRecord<ConsumerRecord<K, V>>) -> RetryRecord<ConsumerRecord<K, V>>
+    ) {
+        val record = getOne(item)
+        if (record == null) {
+            data += RetryRecord(item, 0, OffsetDateTime.now()).also {
+                log.debug { "putting new entry for $item" }
             }
-
-            data[data.indexOf(record)] = mutator(record).also {
-                log.debug { "incrementing attempt for $it" }
-            }
+            return
         }
 
-        override suspend fun remove(consumerRecord: ConsumerRecord<K, V>) {
-            data.removeAll(recordMatches(consumerRecord))
+        data[data.indexOf(record)] = mutator(record).also {
+            log.debug { "incrementing attempt for $it" }
         }
+    }
+
+    override suspend fun remove(item: ConsumerRecord<K, V>) {
+        data.removeAll(recordMatches(item))
     }
 }

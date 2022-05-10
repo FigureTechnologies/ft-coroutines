@@ -5,13 +5,14 @@ import io.provenance.kafka.coroutine.UnAckedConsumerRecord
 import io.provenance.kafka.coroutine.acking
 import io.provenance.kafka.coroutine.kafkaConsumerChannel
 import io.provenance.kafka.coroutine.kafkaProducerChannel
-import io.provenance.kafka.coroutines.retry.flow.retryKafkaFlow
+import io.provenance.kafka.coroutines.retry.flow.retryFlow
 import io.provenance.kafka.coroutines.retry.store.inMemoryRWStore
 import java.nio.ByteBuffer
 import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
@@ -24,29 +25,11 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.ByteArraySerializer
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
-var Logger.level: Level
-    get() = (this as ch.qos.logback.classic.Logger).level
-    set(value) { (this as ch.qos.logback.classic.Logger).level = value }
-
-object LoggerDsl {
-    var String.level: Level
-        get() = LoggerFactory.getLogger(this).level
-        set(value) { LoggerFactory.getLogger(this).level = value }
-}
-
-private fun log(block: LoggerDsl.() -> Unit) = LoggerDsl.block()
-
-const val KCACHE_RETRY_HEADER = "kcache-retry"
-
-
 
 @OptIn(ExperimentalTime::class)
 fun main() = runBlocking {
     log {
-        Logger.ROOT_LOGGER_NAME.level = Level.INFO
+        "ROOT".level = Level.DEBUG
         "org.apache.kafka.clients".level = Level.WARN
         "org.apache.kafka.common.network".level = Level.WARN
     }
@@ -71,14 +54,14 @@ fun main() = runBlocking {
     val i = kafkaProducerChannel<ByteArray, ByteArray>(props + producerProps)
     val store = inMemoryRWStore<ByteArray, ByteArray>()
     val handler = someHandler()
-    val retryHandler = KafkaErrorHandler(mapOf("input" to handler), store)
+    val retryHandler = KafkaFlowRetry(mapOf("input" to handler), store)
 
     launch(Dispatchers.IO) {
-        retryKafkaFlow(retryHandler).collect { log.info("successfully processed:$it") }
+        retryFlow(retryHandler).collect { log.info("successfully processed:$it") }
     }
 
     launch(Dispatchers.IO) {
-        o.consumeAsFlow().tryOnEach(retryHandler.lift(), handler.lift()).acking().collect()
+        o.consumeAsFlow().tryOnEach(retryHandler).acking().collect()
     }
 
     val idx = 1
@@ -92,23 +75,23 @@ fun Int.toByteArray() =
 fun ByteArray.toInt() =
     ByteBuffer.wrap(this).int
 
-fun <K, V> KafkaRetry<K, V>.lift(): suspend (UnAckedConsumerRecord<K, V>, Throwable) -> Unit =
-    { record, _ -> send(record.toConsumerRecord()) }
-
-fun <K, V> (suspend (ConsumerRecord<K, V>) -> Unit).lift(): suspend (UnAckedConsumerRecord<K, V>) -> Unit =
-    { this(it.toConsumerRecord()) }
-
 fun someHandler(): suspend (ConsumerRecord<ByteArray, ByteArray>) -> Unit = fn@{
     val log = KotlinLogging.logger {}
-    val retryAttempt = it.headers().firstOrNull { it.key() == KCACHE_RETRY_HEADER }?.value()?.toInt()
+    val retryAttempt = it.headers().lastHeader(KAFKA_RETRY_ATTEMPTS_HEADER)?.value()?.toInt()
 
     // Let it pass on attempt 5
     // val index = it.key().toInt()
     if ((retryAttempt ?: 0) > 4) {
-        log.info("forcing succeeding retry")
+        log.warn("forcing succeeding retry")
         return@fn
     }
 
     // Forced death.
     throw RuntimeException("forced failure")
 }
+
+fun <K, V> Flow<UnAckedConsumerRecord<K, V>>.tryOnEach(
+    flowProcessor: FlowProcessor<ConsumerRecord<K, V>>,
+    tryBlock: suspend (value: ConsumerRecord<K, V>) -> Unit = { flowProcessor.process(it) }
+): Flow<UnAckedConsumerRecord<K, V>> = tryOnEach(flowProcessor.lifted(), tryBlock.lifted())
+
