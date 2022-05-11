@@ -1,4 +1,4 @@
-package io.provenance.kafka.coroutines.retry.flow
+package io.provenance.coroutines.retry.flow
 
 /**
  * Callback hook for submitting an item into a retry flow.

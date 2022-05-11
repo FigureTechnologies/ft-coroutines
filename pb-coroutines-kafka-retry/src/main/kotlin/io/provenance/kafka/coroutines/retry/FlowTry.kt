@@ -1,7 +1,7 @@
 package io.provenance.kafka.coroutines.retry
 
+import io.provenance.coroutines.retry.flow.FlowProcessor
 import io.provenance.kafka.UnAckedConsumerRecord
-import io.provenance.kafka.coroutines.retry.flow.FlowProcessor
 import io.provenance.kafka.coroutines.retry.flow.lifted
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach

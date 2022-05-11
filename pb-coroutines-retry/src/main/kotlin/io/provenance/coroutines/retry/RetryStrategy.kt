@@ -1,4 +1,4 @@
-package io.provenance.kafka.coroutines.retry
+package io.provenance.coroutines.retry
 
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days

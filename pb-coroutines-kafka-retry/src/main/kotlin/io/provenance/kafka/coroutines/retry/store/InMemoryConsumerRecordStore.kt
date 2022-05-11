@@ -1,10 +1,14 @@
 package io.provenance.kafka.coroutines.retry.store
 
+import io.provenance.coroutines.retry.store.RetryRecord
+import io.provenance.coroutines.retry.store.RetryRecordStore
 import java.time.OffsetDateTime
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
-fun <K, V> inMemoryRWStore(data: MutableList<RetryRecord<ConsumerRecord<K, V>>> = mutableListOf()) = object : RetryRecordStore<ConsumerRecord<K, V>> {
+fun <K, V> inMemoryConsumerRecordStore(
+    data: MutableList<RetryRecord<ConsumerRecord<K, V>>> = mutableListOf()
+) = object : RetryRecordStore<ConsumerRecord<K, V>> {
     val log = KotlinLogging.logger {}
 
     override suspend fun select(

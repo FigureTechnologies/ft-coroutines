@@ -1,8 +1,8 @@
 package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
-import io.provenance.kafka.coroutines.kafkaConsumerChannel
-import io.provenance.kafka.coroutines.kafkaProducerChannel
+import io.provenance.kafka.coroutines.channels.kafkaConsumerChannel
+import io.provenance.kafka.coroutines.channels.kafkaProducerChannel
 import java.time.OffsetDateTime
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.cli.ArgParser

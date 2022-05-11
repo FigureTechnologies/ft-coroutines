@@ -27,5 +27,6 @@ enableFeaturePreview("VERSION_CATALOGS")
 
 include("cli")
 include("pb-coroutines-core")
-include("pb-coroutines-kafka")
 include("pb-coroutines-retry")
+include("pb-coroutines-kafka")
+include("pb-coroutines-kafka-retry")

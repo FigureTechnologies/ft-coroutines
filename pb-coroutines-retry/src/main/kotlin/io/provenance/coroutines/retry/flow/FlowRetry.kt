@@ -1,6 +1,6 @@
-package io.provenance.kafka.coroutines.retry.flow
+package io.provenance.coroutines.retry.flow
 
-import io.provenance.kafka.coroutines.retry.store.RetryRecord
+import io.provenance.coroutines.retry.store.RetryRecord
 import java.time.OffsetDateTime
 import kotlinx.coroutines.flow.Flow
 

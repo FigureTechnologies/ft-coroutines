@@ -1,14 +1,13 @@
 package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
-import io.provenance.kafka.coroutines.acking
-import io.provenance.kafka.coroutines.kafkaConsumerChannel
-import io.provenance.kafka.coroutines.kafkaProducerChannel
+import io.provenance.coroutines.retry.flow.retryFlow
+import io.provenance.kafka.acking
+import io.provenance.kafka.coroutines.channels.kafkaConsumerChannel
+import io.provenance.kafka.coroutines.channels.kafkaProducerChannel
 import io.provenance.kafka.coroutines.retry.KAFKA_RETRY_ATTEMPTS_HEADER
-import io.provenance.kafka.coroutines.retry.KafkaFlowRetry
-import io.provenance.kafka.coroutines.retry.flow.retryFlow
-import io.provenance.kafka.coroutines.retry.lifted
-import io.provenance.kafka.coroutines.retry.store.inMemoryRWStore
+import io.provenance.kafka.coroutines.retry.flow.KafkaFlowRetry
+import io.provenance.kafka.coroutines.retry.store.inMemoryConsumerRecordStore
 import io.provenance.kafka.coroutines.retry.toByteArray
 import io.provenance.kafka.coroutines.retry.toInt
 import io.provenance.kafka.coroutines.retry.tryOnEach
@@ -17,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
@@ -53,14 +53,14 @@ fun main() = runBlocking {
 
     val o = kafkaConsumerChannel<ByteArray, ByteArray>(props + consumerProps, setOf("input", "out"))
     val i = kafkaProducerChannel<ByteArray, ByteArray>(props + producerProps)
-    val retryHandler = KafkaFlowRetry(mapOf("input" to someHandler()), inMemoryRWStore())
+    val retryHandler = KafkaFlowRetry(mapOf("input" to someHandler()), inMemoryConsumerRecordStore())
 
     launch(Dispatchers.IO) {
-        retryFlow(retryHandler).collect { log.info("successfully processed:$it") }
+        retryFlow(retryHandler).onEach { log.info("successfully processed:$it") }.collect()
     }
 
     launch(Dispatchers.IO) {
-        o.consumeAsFlow().tryOnEach(retryHandler.lifted()).acking().collect()
+        o.consumeAsFlow().tryOnEach(retryHandler).acking().collect()
     }
 
     val idx = 1

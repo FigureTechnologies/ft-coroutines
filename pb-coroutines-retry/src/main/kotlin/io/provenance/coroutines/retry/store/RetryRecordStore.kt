@@ -1,4 +1,4 @@
-package io.provenance.kafka.coroutines.retry.store
+package io.provenance.coroutines.retry.store
 
 import java.time.OffsetDateTime
 
