@@ -1,4 +1,4 @@
-rootProject.name = "provenance-kafka-coroutine"
+rootProject.name = "pb-coroutines"
 
 pluginManagement {
     repositories {
@@ -15,7 +15,7 @@ gradle.rootProject {
     val libraryVersion =
         rootProject.property("libraryVersion") ?: error("Missing libraryVersion - check gradle.properties")
     allprojects {
-        group = "io.provenance.kafka-coroutine"
+        group = "io.provenance.coroutines"
         version = libraryVersion
         description =
             "Library for reading from and writing to Kafka from Kotlin coroutines"
@@ -25,7 +25,7 @@ gradle.rootProject {
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 enableFeaturePreview("VERSION_CATALOGS")
 
-rootProject.name = "kafka-coroutines"
 include("cli")
-include("kafka-coroutines-core")
-include("kafka-coroutines-retry")
+include("pb-coroutines-core")
+include("pb-coroutines-kafka")
+include("pb-coroutines-retry")

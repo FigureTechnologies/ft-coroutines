@@ -1,9 +1,9 @@
 package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
-import io.provenance.kafka.coroutine.acking
-import io.provenance.kafka.coroutine.kafkaConsumerChannel
-import io.provenance.kafka.coroutine.kafkaProducerChannel
+import io.provenance.kafka.coroutines.acking
+import io.provenance.kafka.coroutines.kafkaConsumerChannel
+import io.provenance.kafka.coroutines.kafkaProducerChannel
 import io.provenance.kafka.coroutines.retry.KAFKA_RETRY_ATTEMPTS_HEADER
 import io.provenance.kafka.coroutines.retry.KafkaFlowRetry
 import io.provenance.kafka.coroutines.retry.flow.retryFlow
@@ -13,7 +13,6 @@ import io.provenance.kafka.coroutines.retry.toByteArray
 import io.provenance.kafka.coroutines.retry.toInt
 import io.provenance.kafka.coroutines.retry.tryOnEach
 import kotlin.time.Duration.Companion.days
-import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -29,7 +28,6 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
-@OptIn(ExperimentalTime::class)
 fun main() = runBlocking {
     log {
         "ROOT".level = Level.DEBUG
@@ -55,9 +53,7 @@ fun main() = runBlocking {
 
     val o = kafkaConsumerChannel<ByteArray, ByteArray>(props + consumerProps, setOf("input", "out"))
     val i = kafkaProducerChannel<ByteArray, ByteArray>(props + producerProps)
-    val store = inMemoryRWStore<ByteArray, ByteArray>()
-    val handler = someHandler()
-    val retryHandler = KafkaFlowRetry(mapOf("input" to handler), store)
+    val retryHandler = KafkaFlowRetry(mapOf("input" to someHandler()), inMemoryRWStore())
 
     launch(Dispatchers.IO) {
         retryFlow(retryHandler).collect { log.info("successfully processed:$it") }
