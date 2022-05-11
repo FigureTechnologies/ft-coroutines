@@ -1,11 +1,13 @@
 package io.provenance.kafka.coroutines.retry
 
+import io.provenance.kafka.coroutine.UnAckedConsumerRecord
 import io.provenance.kafka.coroutines.retry.store.RetryRecord
 import java.time.OffsetDateTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transform
 import mu.KotlinLogging
+import org.apache.kafka.clients.consumer.ConsumerRecord
 
 /**
  * Callbacks and hooks to generate a limited [Flow] of [RetryRecord] to retry.
@@ -66,16 +68,32 @@ fun <T> logErrorFlowHandler(): suspend (value: T, throwable: Throwable) -> Unit 
 }
 
 /**
+ * Kafka specific implementation of [tryOnEach] to lift the [UnAckedConsumerRecord] into a basic [ConsumerRecord] for processing.
+ *
+ * @param flowProcessor The [FlowProcessor] to use for processing the stream of records.
+ * @return The original flow.
+ */
+fun <K, V> Flow<UnAckedConsumerRecord<K, V>>.tryOnEachConsumerRecord(
+    flowProcessor: FlowProcessor<ConsumerRecord<K, V>>
+): Flow<UnAckedConsumerRecord<K, V>> = tryOnEach(flowProcessor.lifted())
+
+/**
  * Wrap [onEach] into a try {} catch {} to allow dropping the failed flow element into a [FlowProcessor] for later reprocessing.
  *
- * @param flowProcessor The [FlowProcessor] to submit the failed element into.
- * @param tryBlock The method to use to initially process the flow element.
+ * @param flowProcessor The [FlowProcessor] containing callbacks for processing and error handling.
  * @return The original flow.
  */
 fun <T> Flow<T>.tryOnEach(
-    flowProcessor: FlowProcessor<T>,
-    tryBlock: suspend (value: T) -> Unit = { flowProcessor.process(it) },
-): Flow<T> = tryOnEach({ it, e -> KotlinLogging.logger{}.warn("failed record headed for retry", e); flowProcessor.send(it) }, tryBlock)
+    flowProcessor: FlowProcessor<T>
+): Flow<T> = tryOnEach(
+    onFailure = { it, e ->
+        KotlinLogging.logger {}.warn("failed to process record", e)
+        flowProcessor.send(it)
+    },
+    tryBlock = {
+        flowProcessor.process(it)
+    }
+)
 
 /**
  * Wrap [onEach] into a try {} catch {} to allow dropping the failed flow element into the [onFailure] handler for later reprocessing.

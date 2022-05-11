@@ -1,18 +1,21 @@
-package io.provenance.kafka.coroutines.retry
+package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
-import io.provenance.kafka.coroutine.UnAckedConsumerRecord
 import io.provenance.kafka.coroutine.acking
 import io.provenance.kafka.coroutine.kafkaConsumerChannel
 import io.provenance.kafka.coroutine.kafkaProducerChannel
+import io.provenance.kafka.coroutines.retry.KAFKA_RETRY_ATTEMPTS_HEADER
+import io.provenance.kafka.coroutines.retry.KafkaFlowRetry
 import io.provenance.kafka.coroutines.retry.flow.retryFlow
+import io.provenance.kafka.coroutines.retry.lifted
 import io.provenance.kafka.coroutines.retry.store.inMemoryRWStore
-import java.nio.ByteBuffer
+import io.provenance.kafka.coroutines.retry.toByteArray
+import io.provenance.kafka.coroutines.retry.toInt
+import io.provenance.kafka.coroutines.retry.tryOnEach
 import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
@@ -61,7 +64,7 @@ fun main() = runBlocking {
     }
 
     launch(Dispatchers.IO) {
-        o.consumeAsFlow().tryOnEach(retryHandler).acking().collect()
+        o.consumeAsFlow().tryOnEach(retryHandler.lifted()).acking().collect()
     }
 
     val idx = 1
@@ -69,19 +72,13 @@ fun main() = runBlocking {
     delay(1.days)
 }
 
-fun Int.toByteArray() =
-    ByteBuffer.allocate(Int.SIZE_BYTES).putInt(this).array()
-
-fun ByteArray.toInt() =
-    ByteBuffer.wrap(this).int
-
-fun someHandler(): suspend (ConsumerRecord<ByteArray, ByteArray>) -> Unit = fn@{
+private fun someHandler(): suspend (ConsumerRecord<ByteArray, ByteArray>) -> Unit = fn@{
     val log = KotlinLogging.logger {}
     val retryAttempt = it.headers().lastHeader(KAFKA_RETRY_ATTEMPTS_HEADER)?.value()?.toInt()
 
     // Let it pass on attempt 5
     // val index = it.key().toInt()
-    if ((retryAttempt ?: 0) > 4) {
+    if ((retryAttempt ?: 0) > 2) {
         log.warn("forcing succeeding retry")
         return@fn
     }
@@ -89,9 +86,3 @@ fun someHandler(): suspend (ConsumerRecord<ByteArray, ByteArray>) -> Unit = fn@{
     // Forced death.
     throw RuntimeException("forced failure")
 }
-
-fun <K, V> Flow<UnAckedConsumerRecord<K, V>>.tryOnEach(
-    flowProcessor: FlowProcessor<ConsumerRecord<K, V>>,
-    tryBlock: suspend (value: ConsumerRecord<K, V>) -> Unit = { flowProcessor.process(it) }
-): Flow<UnAckedConsumerRecord<K, V>> = tryOnEach(flowProcessor.lifted(), tryBlock.lifted())
-

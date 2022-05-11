@@ -1,4 +1,4 @@
-package io.provenance.kafka.coroutines.retry
+package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
 import org.slf4j.Logger
