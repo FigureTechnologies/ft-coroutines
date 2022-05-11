@@ -48,7 +48,7 @@ open class KafkaFlowRetry<K, V>(
     private val handlers: Map<String, suspend (ConsumerRecord<K, V>) -> Unit>,
     private val store: RetryRecordStore<ConsumerRecord<K, V>>,
     private val groupSize: Int = DEFAULT_RECORD_REPROCESS_GROUP_SIZE,
-): FlowRetry<ConsumerRecord<K, V>> {
+) : FlowRetry<ConsumerRecord<K, V>> {
     private val log = KotlinLogging.logger {}
 
     override suspend fun produceNext(

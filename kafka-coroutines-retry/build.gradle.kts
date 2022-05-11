@@ -18,4 +18,3 @@ dependencies {
 
     implementation(projects.kafkaCoroutinesCore)
 }
-

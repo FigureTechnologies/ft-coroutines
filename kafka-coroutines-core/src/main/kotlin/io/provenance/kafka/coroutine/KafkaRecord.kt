@@ -52,6 +52,6 @@ internal fun <K, V> wrapping(consumerRecord: ConsumerRecord<K, V>): KafkaRecord<
     }
 }
 
-private fun Int?.toOptional(): Optional<Int> =
+private fun <T : Any> T?.toOptional(): Optional<T> =
     if (this == null) Optional.empty()
     else Optional.of(this)

@@ -54,7 +54,6 @@ interface FlowProcessor<T> {
      * @param item The item that is being retried.
      */
     suspend fun process(item: T, attempt: Int = 0)
-
 }
 
 /**

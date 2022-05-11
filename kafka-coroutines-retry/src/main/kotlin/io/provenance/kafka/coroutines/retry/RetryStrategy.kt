@@ -17,7 +17,7 @@ private fun <A, B : Throwable> logFailure(): (A, B) -> Unit {
 }
 
 data class RetryStrategy(val lastAttempted: Duration, val attempts: Int, val onFailure: (String, Throwable) -> Unit = logFailure()) {
-    val name: String = "${lastAttempted.toString().lowercase()}-${attempts}-times"
+    val name: String = "${lastAttempted.toString().lowercase()}-$attempts-times"
 }
 
 val defaultRetryStrategies = listOf(
