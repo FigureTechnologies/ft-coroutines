@@ -1,10 +1,10 @@
 [versions]
 kafka = "3.1.0"
-kotlinxCore = "1.5.2"
-kotlinxCli = "0.3.3"
+kotlinxCore = "1.6.1"
+kotlinxCli = "0.3.4"
 kotlinxDateTime = "0.3.0"
-kotlinLogging = "2.0.11"
-logback = "1.2.3"
+kotlinLogging = "2.1.21"
+logback = "1.2.11"
 
 pluginNexusPublishPlugin = "1.1.0"
 
