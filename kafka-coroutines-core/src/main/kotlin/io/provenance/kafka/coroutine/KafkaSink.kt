@@ -22,7 +22,6 @@ suspend fun <T> Future<T>.asDeferred(timeout: Duration = Duration.ZERO, coroutin
     }
 }
 
-@OptIn(ExperimentalStdlibApi::class)
 class KafkaSink<K, V>(
     producerProps: Map<String, Any>,
     val topicName: String,

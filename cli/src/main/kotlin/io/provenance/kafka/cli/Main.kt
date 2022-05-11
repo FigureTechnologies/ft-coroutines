@@ -18,21 +18,13 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.selects.select
+import mu.KotlinLogging.logger
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
-fun logger(name: String): Logger = LoggerFactory.getLogger(name)
-var Logger.level: Level
-    get() = (this as ch.qos.logback.classic.Logger).level
-    set(value) {
-        (this as ch.qos.logback.classic.Logger).level = value
-    }
 
 @OptIn(ObsoleteCoroutinesApi::class)
 fun main(args: Array<String>) {
@@ -52,8 +44,11 @@ fun main(args: Array<String>) {
         ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to StringSerializer::class.java,
     )
 
-    logger("org.apache.kafka").level = Level.WARN
+    log {
+        "org.apache.kafka".level = Level.WARN
+    }
 
+    val log = logger("main")
     val incoming = kafkaConsumerChannel<String, String>(commonProps, setOf(source))
     val producer = kafkaProducerChannel<String, String>(commonProps)
 
@@ -70,18 +65,18 @@ fun main(args: Array<String>) {
             while (true) {
                 select<Unit> {
                     incoming.onReceive {
-                        logger("main").info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
+                        log.info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
 
                         val rec = it
                         producer.onSend(ProducerRecord(dest, it.key, it.value)) {
                             val ack = rec.ack()
-                            logger("main").info("post-commit: ${ack.key} // ${ack.value} @ ${rec.offset}")
+                            log.info("post-commit: ${ack.key} // ${ack.value} @ ${rec.offset}")
                         }
                     }
 
                     // Periodically send messages to kafka so we have something to consumer in the other coroutine above.
                     ticker.onReceive {
-                        logger("main").info("ticker")
+                        log.info("ticker")
                         producer.send(ProducerRecord(source, dest, "test-${i.getAndIncrement()}"))
                     }
                 }
@@ -98,10 +93,10 @@ fun main(args: Array<String>) {
 
         launch(Dispatchers.IO) {
             incoming.receiveAsFlow().buffer().onEach {
-                logger("main").info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
+                log.info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
                 producer.send(ProducerRecord(dest, it.key, it.value))
                 val ack = it.ack()
-                logger("main").info("post-commit: ${ack.key} // ${ack.value} @ ${it.offset}")
+                log.info("post-commit: ${ack.key} // ${ack.value} @ ${it.offset}")
             }.collect()
         }
 
@@ -110,7 +105,7 @@ fun main(args: Array<String>) {
             val ticker = ticker(5000)
             val i = AtomicInteger(0)
             ticker.receiveAsFlow().onEach {
-                logger("main").info("ticker")
+                log.info("ticker")
                 producer.send(ProducerRecord(source, dest, "test-${i.getAndIncrement()}"))
             }.collect()
         }

@@ -9,6 +9,8 @@ repositories {
 
 dependencies {
     implementation(projects.kafkaCoroutinesCore)
+    implementation(projects.kafkaCoroutinesRetry)
+
     implementation(libs.bundles.logback)
     implementation(libs.bundles.kotlinxCoroutines)
 
