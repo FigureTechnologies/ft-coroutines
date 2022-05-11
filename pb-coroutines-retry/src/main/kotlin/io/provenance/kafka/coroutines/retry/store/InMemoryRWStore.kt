@@ -4,17 +4,6 @@ import java.time.OffsetDateTime
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
-internal fun <K, V> recordMatches(other: ConsumerRecord<K, V>): (RetryRecord<ConsumerRecord<K, V>>) -> Boolean {
-    return {
-        with(it.data) {
-            key() == other.key() &&
-                value() == other.value() &&
-                topic() == other.topic() &&
-                partition() == other.partition()
-        }
-    }
-}
-
 fun <K, V> inMemoryRWStore(data: MutableList<RetryRecord<ConsumerRecord<K, V>>> = mutableListOf()) = object : RetryRecordStore<ConsumerRecord<K, V>> {
     val log = KotlinLogging.logger {}
 
@@ -52,5 +41,16 @@ fun <K, V> inMemoryRWStore(data: MutableList<RetryRecord<ConsumerRecord<K, V>>> 
 
     override suspend fun remove(item: ConsumerRecord<K, V>) {
         data.removeAll(recordMatches(item))
+    }
+
+    private fun <K, V> recordMatches(other: ConsumerRecord<K, V>): (RetryRecord<ConsumerRecord<K, V>>) -> Boolean {
+        return {
+            with(it.data) {
+                key() == other.key() &&
+                    value() == other.value() &&
+                    topic() == other.topic() &&
+                    partition() == other.partition()
+            }
+        }
     }
 }

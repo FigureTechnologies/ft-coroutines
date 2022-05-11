@@ -21,7 +21,7 @@ data class RetryStrategy(val lastAttempted: Duration, val attempts: Int, val onF
 }
 
 val defaultRetryStrategies = listOf(
-    RetryStrategy(10.seconds, 3),
+    RetryStrategy(10.seconds, 3, noop2()),
     RetryStrategy(5.minutes, 5),
     RetryStrategy(1.hours, 5),
     RetryStrategy(3.hours, 2),

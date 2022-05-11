@@ -1,14 +1,14 @@
 package io.provenance.kafka.coroutines.retry.flow
 
-import io.provenance.kafka.coroutines.retry.FlowRetry
+import io.provenance.coroutines.tryMap
 import io.provenance.kafka.coroutines.retry.RetryStrategy
 import io.provenance.kafka.coroutines.retry.defaultRetryStrategies
 import io.provenance.kafka.coroutines.retry.invert
 import io.provenance.kafka.coroutines.retry.store.RetryRecord
-import io.provenance.kafka.coroutines.retry.tryMap
 import java.time.OffsetDateTime
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ProducerScope
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import mu.KotlinLogging
 
-val DEFAULT_RETRY_INTERVAL = 10.seconds
+internal val DEFAULT_RETRY_INTERVAL = 10.seconds
 
 /**
  * Create a retrying [Flow].
@@ -31,7 +31,7 @@ val DEFAULT_RETRY_INTERVAL = 10.seconds
  *
  * Once a record is successfully processed, emit the data element out to the flow.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalTime::class)
 fun <T> retryFlow(
     flowRetry: FlowRetry<T>,
     retryInterval: Duration = DEFAULT_RETRY_INTERVAL,

@@ -7,9 +7,9 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeader
 
 open class RetryRecord<T>(
-    open val data: T,
-    open val attempt: Int,
-    open val lastAttempted: OffsetDateTime,
+    val data: T,
+    val attempt: Int,
+    val lastAttempted: OffsetDateTime,
 ) {
     fun copy(
         data: T = this.data,

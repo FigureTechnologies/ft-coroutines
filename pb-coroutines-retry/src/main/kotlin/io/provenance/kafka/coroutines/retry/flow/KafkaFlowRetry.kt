@@ -1,7 +1,6 @@
 package io.provenance.kafka.coroutines.retry.flow
 
 import io.provenance.kafka.coroutines.retry.DEFAULT_RECORD_REPROCESS_GROUP_SIZE
-import io.provenance.kafka.coroutines.retry.FlowRetry
 import io.provenance.kafka.coroutines.retry.KAFKA_RETRY_ATTEMPTS_HEADER
 import io.provenance.kafka.coroutines.retry.store.RetryRecord
 import io.provenance.kafka.coroutines.retry.store.RetryRecordStore
