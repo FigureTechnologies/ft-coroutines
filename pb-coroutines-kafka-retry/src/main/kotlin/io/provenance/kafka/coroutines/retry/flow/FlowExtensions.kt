@@ -1,8 +1,8 @@
 package io.provenance.kafka.coroutines.retry.flow
 
 import io.provenance.coroutines.retry.flow.FlowProcessor
-import io.provenance.kafka.UnAckedConsumerRecord
 import io.provenance.kafka.coroutines.retry.tryOnEach
+import io.provenance.kafka.records.UnAckedConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
 /**

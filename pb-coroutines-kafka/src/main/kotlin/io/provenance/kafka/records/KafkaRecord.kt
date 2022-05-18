@@ -1,4 +1,4 @@
-package io.provenance.kafka
+package io.provenance.kafka.records
 
 import java.util.Optional
 import org.apache.kafka.clients.consumer.ConsumerRecord

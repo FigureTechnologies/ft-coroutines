@@ -4,8 +4,8 @@ import java.time.OffsetDateTime
 
 open class RetryRecord<T>(
     val data: T,
-    val attempt: Int,
-    val lastAttempted: OffsetDateTime,
+    val attempt: Int = 0,
+    val lastAttempted: OffsetDateTime = OffsetDateTime.now(),
 ) {
     fun copy(
         data: T = this.data,

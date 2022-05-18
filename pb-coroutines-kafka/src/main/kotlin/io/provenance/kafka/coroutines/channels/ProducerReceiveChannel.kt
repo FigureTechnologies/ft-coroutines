@@ -3,7 +3,6 @@ package io.provenance.kafka.coroutines.channels
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -17,11 +16,6 @@ import mu.KotlinLogging
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
-
-/**
- *
- */
-val DEFAULT_SEND_TIMEOUT = 10.seconds
 
 /**
  * Create a [SendChannel] for producer records to send to kafka.

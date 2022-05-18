@@ -2,7 +2,7 @@ package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
 import io.provenance.coroutines.retry.flow.retryFlow
-import io.provenance.kafka.acking
+import io.provenance.kafka.records.acking
 import io.provenance.kafka.coroutines.channels.kafkaConsumerChannel
 import io.provenance.kafka.coroutines.channels.kafkaProducerChannel
 import io.provenance.kafka.coroutines.retry.KAFKA_RETRY_ATTEMPTS_HEADER

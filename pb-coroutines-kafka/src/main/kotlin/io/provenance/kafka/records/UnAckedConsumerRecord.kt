@@ -1,4 +1,4 @@
-package io.provenance.kafka
+package io.provenance.kafka.records
 
 import java.time.Duration
 import kotlinx.coroutines.channels.Channel

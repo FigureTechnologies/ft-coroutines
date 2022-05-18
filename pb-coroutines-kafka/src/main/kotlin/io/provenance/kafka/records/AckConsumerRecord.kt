@@ -1,4 +1,4 @@
-package io.provenance.kafka
+package io.provenance.kafka.records
 
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.OffsetAndMetadata

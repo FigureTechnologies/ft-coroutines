@@ -10,6 +10,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaDuration
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
@@ -21,13 +22,13 @@ internal val DEFAULT_RETRY_INTERVAL = 10.seconds
 /**
  * Create a retrying [Flow].
  *
- * Using [FlowRetry.produceNext] as the data source, feed retry records into [FlowRetry.retry].
+ * Using [FlowRetry.produceNext] as the data source, feed retry records into [FlowRetry.process].
  * * If successful, route through [FlowRetry.onSuccess].
  * * If failed, route through [FlowRetry.onFailure].
  *
  * Once a record is successfully processed, emit the data element out to the flow.
  */
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, ExperimentalCoroutinesApi::class)
 fun <T> retryFlow(
     flowRetry: FlowRetry<T>,
     retryInterval: Duration = DEFAULT_RETRY_INTERVAL,

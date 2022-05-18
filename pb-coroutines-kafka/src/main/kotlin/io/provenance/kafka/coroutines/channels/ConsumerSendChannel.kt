@@ -1,12 +1,13 @@
 package io.provenance.kafka.coroutines.channels
 
-import io.provenance.kafka.CommitConsumerRecord
-import io.provenance.kafka.UnAckedConsumerRecord
-import io.provenance.kafka.UnAckedConsumerRecordImpl
-import io.provenance.kafka.coroutines.ifEmpty
-import java.time.Duration
+import io.provenance.kafka.records.CommitConsumerRecord
+import io.provenance.kafka.records.UnAckedConsumerRecord
+import io.provenance.kafka.records.UnAckedConsumerRecordImpl
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.time.toJavaDuration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -87,7 +88,14 @@ open class KafkaConsumerChannel<K, V>(
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalTime::class)
+    private fun <K, V> Consumer<K, V>.poll(duration: Duration) =
+        poll(duration.toJavaDuration())
+
+    private fun <T, L : Iterable<T>> L.ifEmpty(block: () -> L): L =
+        if (count() == 0) block() else this
+
+    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     fun run() {
         consumer.init()
 
