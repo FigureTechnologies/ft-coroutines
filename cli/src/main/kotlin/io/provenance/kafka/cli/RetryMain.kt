@@ -2,6 +2,7 @@ package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
 import io.provenance.coroutines.retry.flow.retryFlow
+import io.provenance.coroutines.tryOnEach
 import io.provenance.kafka.records.acking
 import io.provenance.kafka.coroutines.channels.kafkaConsumerChannel
 import io.provenance.kafka.coroutines.channels.kafkaProducerChannel
@@ -16,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
@@ -28,7 +28,19 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
-fun main() = runBlocking {
+fun main() {
+    val node = "tpc://test.io"
+    val ret = when (val t = { it: String -> node.startsWith(it) }) {
+        t("test") -> "other"
+        t("some") -> "thing"
+        t("tcp") -> "yayaya"
+        else -> "nooooooooooo"
+    }
+
+    println(ret)
+}
+
+fun maina() = runBlocking {
     log {
         "ROOT".level = Level.DEBUG
         "org.apache.kafka.clients".level = Level.WARN
@@ -56,7 +68,7 @@ fun main() = runBlocking {
     val retryHandler = KafkaFlowRetry(mapOf("input" to someHandler()), inMemoryConsumerRecordStore())
 
     launch(Dispatchers.IO) {
-        retryFlow(retryHandler).onEach { log.info("successfully processed:$it") }.collect()
+        retryFlow(retryHandler).tryOnEach { log.info("successfully processed:$it") }.collect()
     }
 
     launch(Dispatchers.IO) {

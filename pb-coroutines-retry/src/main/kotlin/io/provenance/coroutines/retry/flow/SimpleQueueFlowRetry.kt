@@ -1,6 +1,6 @@
 package io.provenance.coroutines.retry.flow
 
-import io.provenance.coroutines.receiveAllPending
+import io.provenance.coroutines.channels.receiveQueued
 import io.provenance.coroutines.retry.store.RetryRecord
 import java.time.OffsetDateTime
 import kotlinx.coroutines.channels.Channel
@@ -23,7 +23,7 @@ class SimpleChannelFlowRetry<T>(
     }
 
     override suspend fun produceNext(attemptRange: IntRange, olderThan: OffsetDateTime): Flow<RetryRecord<T>> {
-        return queue.receiveAllPending().asFlow()
+        return queue.receiveQueued().asFlow()
     }
 
     override suspend fun onSuccess(item: RetryRecord<T>) {

@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import io.provenance.coroutines.tryOnEach as tryOnEach_
+import io.provenance.coroutines.tryOnEach
 
 /**
  * Kafka specific implementation of [tryOnEach] to lift the [UnAckedConsumerRecord] into a basic [ConsumerRecord] for processing.
@@ -17,7 +17,7 @@ import io.provenance.coroutines.tryOnEach as tryOnEach_
  */
 fun <K, V> Flow<UnAckedConsumerRecord<K, V>>.tryOnEach(
     flowProcessor: FlowProcessor<ConsumerRecord<K, V>>
-): Flow<UnAckedConsumerRecord<K, V>> = tryFlow(flowProcessor.lifted())
+): Flow<UnAckedConsumerRecord<K, V>> = tryOnEachProcess(flowProcessor.lifted())
 
 /**
  * Wrap [onEach] into a try {} catch {} to allow dropping the failed flow element into a [FlowProcessor] for later reprocessing.
@@ -25,7 +25,7 @@ fun <K, V> Flow<UnAckedConsumerRecord<K, V>>.tryOnEach(
  * @param flowProcessor The [FlowProcessor] containing callbacks for processing and error handling.
  * @return The original flow.
  */
-fun <T> Flow<T>.tryFlow(flowProcessor: FlowProcessor<T>): Flow<T> = tryOnEach_(
+fun <T> Flow<T>.tryOnEachProcess(flowProcessor: FlowProcessor<T>): Flow<T> = tryOnEach(
     onFailure = { it, e ->
         KotlinLogging.logger {}.warn("failed to process record", e)
         flowProcessor.send(it)
