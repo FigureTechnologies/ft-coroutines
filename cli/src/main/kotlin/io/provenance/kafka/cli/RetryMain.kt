@@ -28,19 +28,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
-fun main() {
-    val node = "tpc://test.io"
-    val ret = when (val t = { it: String -> node.startsWith(it) }) {
-        t("test") -> "other"
-        t("some") -> "thing"
-        t("tcp") -> "yayaya"
-        else -> "nooooooooooo"
-    }
-
-    println(ret)
-}
-
-fun maina() = runBlocking {
+fun main() = runBlocking {
     log {
         "ROOT".level = Level.DEBUG
         "org.apache.kafka.clients".level = Level.WARN
