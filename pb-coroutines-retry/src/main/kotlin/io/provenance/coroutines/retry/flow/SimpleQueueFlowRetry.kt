@@ -34,7 +34,3 @@ class SimpleChannelFlowRetry<T>(
         onFailure.invoke(item.data)
     }
 }
-
-fun main() {
-    
-}

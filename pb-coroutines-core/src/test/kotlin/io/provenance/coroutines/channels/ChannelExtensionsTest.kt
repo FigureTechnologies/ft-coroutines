@@ -7,7 +7,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.toList
 
 private suspend operator fun <T> Channel<T>.plusAssign(item: T) { send(item) }
-private suspend operator fun <T> Channel<T>.plusAssign(items: Iterable<T>) { items.forEach { send(it) }}
+private suspend operator fun <T> Channel<T>.plusAssign(items: Iterable<T>) { items.forEach { send(it) } }
 
 private suspend operator fun <T> Channel<T>.plus(item: T) = (toList() + item).asChannel()
 private suspend operator fun <T> Channel<T>.plus(items: Iterable<T>) = (toList() + items).asChannel()
