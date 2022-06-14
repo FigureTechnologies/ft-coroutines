@@ -35,11 +35,12 @@ fun <K, V> inMemoryRWStore(data: MutableList<RetryRecord<ConsumerRecord<K, V>>> 
 
     override suspend fun putOne(
         item: ConsumerRecord<K, V>,
+        message: String?,
         mutator: (RetryRecord<ConsumerRecord<K, V>>) -> RetryRecord<ConsumerRecord<K, V>>
     ) {
         val record = getOne(item)
         if (record == null) {
-            data += RetryRecord(item, 0, OffsetDateTime.now()).also {
+            data += RetryRecord(item, 0, OffsetDateTime.now(), message ?: "No error message available").also {
                 log.debug { "putting new entry for $item" }
             }
             return

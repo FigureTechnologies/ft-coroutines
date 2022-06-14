@@ -10,14 +10,16 @@ open class RetryRecord<T>(
     open val data: T,
     open val attempt: Int,
     open val lastAttempted: OffsetDateTime,
+    open val message: String,
 ) {
     fun copy(
         data: T = this.data,
         attempt: Int = this.attempt,
-        lastAttempted: OffsetDateTime = this.lastAttempted
-    ) = RetryRecord(data, attempt, lastAttempted)
+        lastAttempted: OffsetDateTime = this.lastAttempted,
+        message: String = this.message
+    ) = RetryRecord(data, attempt, lastAttempted, message)
 
-    override fun toString(): String = "RetryRecord(attempt:$attempt lastAttempted:$lastAttempted data:$data)"
+    override fun toString(): String = "RetryRecord(attempt:$attempt lastAttempted:$lastAttempted data:$data reason:$message)"
 }
 
 private fun Headers.addOrUpdate(header: Header): Headers {

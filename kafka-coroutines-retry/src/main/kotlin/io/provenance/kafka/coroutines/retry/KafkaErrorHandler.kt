@@ -19,8 +19,8 @@ const val KAFKA_RETRY_ATTEMPTS_HEADER = "kcache-retry"
  */
 fun <K, V> FlowProcessor<ConsumerRecord<K, V>>.lifted(): FlowProcessor<UnAckedConsumerRecord<K, V>> {
     return object : FlowProcessor<UnAckedConsumerRecord<K, V>> {
-        override suspend fun send(item: UnAckedConsumerRecord<K, V>) {
-            this@lifted.send(item.toConsumerRecord())
+        override suspend fun send(item: UnAckedConsumerRecord<K, V>, message: String) {
+            this@lifted.send(item.toConsumerRecord(), message)
         }
 
         override suspend fun process(item: UnAckedConsumerRecord<K, V>, attempt: Int) {
@@ -57,10 +57,11 @@ open class KafkaFlowRetry<K, V>(
     ) = store.select(attemptRange, olderThan).sortedByDescending { it.lastAttempted }.take(groupSize).asFlow()
 
     override suspend fun send(
-        item: ConsumerRecord<K, V>
+        item: ConsumerRecord<K, V>,
+        message: String
     ) {
         log.debug { "adding record to retry queue key:${item.key()} source:${item.topic()}-${item.partition()}" }
-        store.putOne(item) { it.copy(attempt = 0, lastAttempted = OffsetDateTime.now()) }
+        store.putOne(item, message) { it.copy(attempt = 0, lastAttempted = OffsetDateTime.now(), message = message) }
     }
 
     override suspend fun onSuccess(
@@ -73,7 +74,7 @@ open class KafkaFlowRetry<K, V>(
     override suspend fun onFailure(
         item: RetryRecord<ConsumerRecord<K, V>>
     ) {
-        log.debug { "failed reprocess attempt:${item.attempt} key:${item.data.key()} source:${item.data.topic()}-${item.data.partition()}" }
+        log.debug { "failed reprocess attempt:${item.attempt} Error: ${item.message} key:${item.data.key()} source:${item.data.topic()}-${item.data.partition()}" }
         store.putOne(item.data) { it.copy(attempt = it.attempt.inc(), lastAttempted = OffsetDateTime.now()) }
     }
 
