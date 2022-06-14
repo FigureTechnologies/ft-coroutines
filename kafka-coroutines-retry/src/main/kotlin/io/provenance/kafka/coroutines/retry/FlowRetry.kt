@@ -46,7 +46,7 @@ interface FlowProcessor<T> {
      *
      * @param item The item to send into the retry hopper.
      */
-    suspend fun send(item: T, message: String)
+    suspend fun send(item: T, e: Throwable)
 
     /**
      * Process an item.
@@ -87,7 +87,7 @@ fun <T> Flow<T>.tryOnEach(
 ): Flow<T> = tryOnEach(
     onFailure = { it, e ->
         KotlinLogging.logger {}.warn("failed to process record", e)
-        flowProcessor.send(it, e.localizedMessage)
+        flowProcessor.send(it, e)
     },
     tryBlock = {
         flowProcessor.process(it)
