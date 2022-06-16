@@ -12,7 +12,7 @@ open class RetryRecord<T>(
         data: T = this.data,
         attempt: Int = this.attempt,
         lastAttempted: OffsetDateTime = this.lastAttempted,
-        newException: String = ""
+        newException: String = this.lastException
     ) = RetryRecord(data, attempt, lastAttempted, newException)
 
     override fun toString(): String = "RetryRecord(attempt:$attempt Exception:$lastException lastAttempted:$lastAttempted data:$data)"

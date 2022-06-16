@@ -33,7 +33,7 @@ fun <K, V> inMemoryConsumerRecordStore(
     ) {
         val record = getOne(item)
         if (record == null) {
-            data += RetryRecord(item, 0, OffsetDateTime.now(), e?.message ?: "No error message available").also {
+            data += RetryRecord(item, 0, OffsetDateTime.now(), e?.message.orEmpty()).also {
                 log.debug { "putting new entry for $item" }
             }
             return
