@@ -34,10 +34,11 @@ open class KafkaFlowRetry<K, V>(
     ) = store.select(attemptRange, olderThan).sortedByDescending { it.lastAttempted }.take(groupSize).asFlow()
 
     override suspend fun send(
-        item: ConsumerRecord<K, V>
+        item: ConsumerRecord<K, V>,
+        e: Throwable
     ) {
         log.debug { "adding record to retry queue key:${item.key()} source:${item.topic()}-${item.partition()}" }
-        store.putOne(item) { it.copy(attempt = 0, lastAttempted = OffsetDateTime.now()) }
+        store.putOne(item, e) { it.copy(attempt = 0, lastAttempted = OffsetDateTime.now(), newException = e.localizedMessage) }
     }
 
     override suspend fun onSuccess(
@@ -50,7 +51,7 @@ open class KafkaFlowRetry<K, V>(
     override suspend fun onFailure(
         item: RetryRecord<ConsumerRecord<K, V>>
     ) {
-        log.debug { "failed reprocess attempt:${item.attempt} key:${item.data.key()} source:${item.data.topic()}-${item.data.partition()}" }
+        log.debug { "failed reprocess attempt:${item.attempt} Error: ${item.lastException} key:${item.data.key()} source:${item.data.topic()}-${item.data.partition()}" }
         store.putOne(item.data) { it.copy(attempt = it.attempt.inc(), lastAttempted = OffsetDateTime.now()) }
     }
 

@@ -9,7 +9,7 @@ interface FlowProcessor<T> {
      *
      * @param item The item to send into the hopper.
      */
-    suspend fun send(item: T)
+    suspend fun send(item: T, e: Throwable)
 
     /**
      * Process an item.

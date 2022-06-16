@@ -14,8 +14,8 @@ class SimpleChannelFlowRetry<T>(
     private val onFailure: (T) -> Unit = {},
     private val block: (T, Int) -> Unit,
 ) : FlowRetry<T> {
-    override suspend fun send(item: T) {
-        queue.send(RetryRecord(item))
+    override suspend fun send(item: T, e: Throwable) {
+        queue.send(RetryRecord(item, lastException = e.localizedMessage))
     }
 
     override suspend fun process(item: T, attempt: Int) {

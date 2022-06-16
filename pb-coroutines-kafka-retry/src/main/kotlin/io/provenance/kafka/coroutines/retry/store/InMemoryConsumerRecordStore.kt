@@ -28,11 +28,12 @@ fun <K, V> inMemoryConsumerRecordStore(
 
     override suspend fun putOne(
         item: ConsumerRecord<K, V>,
+        e: Throwable?,
         mutator: (RetryRecord<ConsumerRecord<K, V>>) -> RetryRecord<ConsumerRecord<K, V>>
     ) {
         val record = getOne(item)
         if (record == null) {
-            data += RetryRecord(item, 0, OffsetDateTime.now()).also {
+            data += RetryRecord(item, 0, OffsetDateTime.now(), e?.message.orEmpty()).also {
                 log.debug { "putting new entry for $item" }
             }
             return
