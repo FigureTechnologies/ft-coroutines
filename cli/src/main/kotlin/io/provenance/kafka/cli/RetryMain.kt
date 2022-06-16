@@ -1,19 +1,18 @@
 package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
-import io.provenance.kafka.coroutine.acking
-import io.provenance.kafka.coroutine.kafkaConsumerChannel
-import io.provenance.kafka.coroutine.kafkaProducerChannel
+import io.provenance.coroutines.retry.flow.retryFlow
+import io.provenance.coroutines.tryOnEach
+import io.provenance.kafka.records.acking
+import io.provenance.kafka.coroutines.channels.kafkaConsumerChannel
+import io.provenance.kafka.coroutines.channels.kafkaProducerChannel
 import io.provenance.kafka.coroutines.retry.KAFKA_RETRY_ATTEMPTS_HEADER
-import io.provenance.kafka.coroutines.retry.KafkaFlowRetry
-import io.provenance.kafka.coroutines.retry.flow.retryFlow
-import io.provenance.kafka.coroutines.retry.lifted
-import io.provenance.kafka.coroutines.retry.store.inMemoryRWStore
+import io.provenance.kafka.coroutines.retry.flow.KafkaFlowRetry
+import io.provenance.kafka.coroutines.retry.store.inMemoryConsumerRecordStore
 import io.provenance.kafka.coroutines.retry.toByteArray
 import io.provenance.kafka.coroutines.retry.toInt
 import io.provenance.kafka.coroutines.retry.tryOnEach
 import kotlin.time.Duration.Companion.days
-import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -29,7 +28,6 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
-@OptIn(ExperimentalTime::class)
 fun main() = runBlocking {
     log {
         "ROOT".level = Level.DEBUG
@@ -55,16 +53,14 @@ fun main() = runBlocking {
 
     val o = kafkaConsumerChannel<ByteArray, ByteArray>(props + consumerProps, setOf("input", "out"))
     val i = kafkaProducerChannel<ByteArray, ByteArray>(props + producerProps)
-    val store = inMemoryRWStore<ByteArray, ByteArray>()
-    val handler = someHandler()
-    val retryHandler = KafkaFlowRetry(mapOf("input" to handler), store)
+    val retryHandler = KafkaFlowRetry(mapOf("input" to someHandler()), inMemoryConsumerRecordStore())
 
     launch(Dispatchers.IO) {
-        retryFlow(retryHandler).collect { log.info("successfully processed:$it") }
+        retryFlow(retryHandler).tryOnEach { log.info("successfully processed:$it") }.collect()
     }
 
     launch(Dispatchers.IO) {
-        o.consumeAsFlow().tryOnEach(retryHandler.lifted()).acking().collect()
+        o.consumeAsFlow().tryOnEach(retryHandler).acking().collect()
     }
 
     val idx = 1

@@ -20,9 +20,6 @@ plugins {
 group = rootProject.group
 version = rootProject.version
 
-val nexusUser = findProperty("nexusUser")?.toString() ?: System.getenv("NEXUS_USER")
-val nexusPass = findProperty("nexusPass")?.toString() ?: System.getenv("NEXUS_PASS")
-
 repositories {
     mavenCentral()
 }
@@ -40,6 +37,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Versions.Kotlinx.Core)
 
     implementation("io.github.microutils", "kotlin-logging-jvm", Versions.KotlinLogging)
+
+    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Versions.Kotlinx.Core)
+    testImplementation("io.kotest", "kotest-runner-junit5", Versions.Kotest)
+
 }
 
 // Compilation:
