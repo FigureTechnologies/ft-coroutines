@@ -1,5 +1,3 @@
 plugins {
-    kotlin("jvm")
-
-    `java-library`
+    id("core-config")
 }

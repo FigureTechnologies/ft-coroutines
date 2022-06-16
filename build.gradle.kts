@@ -1,3 +1,3 @@
 plugins {
-    id("with-publish-maven-central")
+    id("with-nexus-publish")
 }

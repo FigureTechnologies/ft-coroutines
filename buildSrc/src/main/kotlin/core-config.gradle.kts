@@ -20,9 +20,6 @@ plugins {
 group = rootProject.group
 version = rootProject.version
 
-val nexusUser = findProperty("nexusUser")?.toString() ?: System.getenv("NEXUS_USER")
-val nexusPass = findProperty("nexusPass")?.toString() ?: System.getenv("NEXUS_PASS")
-
 repositories {
     mavenCentral()
 }
