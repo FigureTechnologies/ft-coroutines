@@ -1,10 +1,5 @@
 plugins {
-    kotlin("jvm")
-    `java-library`
-}
-
-repositories {
-    mavenCentral()
+    id("core-config")
 }
 
 dependencies {
