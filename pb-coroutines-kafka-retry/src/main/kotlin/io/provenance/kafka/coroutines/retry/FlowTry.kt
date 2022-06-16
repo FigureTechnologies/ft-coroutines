@@ -28,7 +28,7 @@ fun <K, V> Flow<UnAckedConsumerRecord<K, V>>.tryOnEach(
 fun <T> Flow<T>.tryOnEachProcess(flowProcessor: FlowProcessor<T>): Flow<T> = tryOnEach(
     onFailure = { it, e ->
         KotlinLogging.logger {}.warn("failed to process record", e)
-        flowProcessor.send(it)
+        flowProcessor.send(it, e)
     },
     tryBlock = {
         flowProcessor.process(it)

@@ -12,8 +12,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
  */
 fun <K, V> FlowProcessor<ConsumerRecord<K, V>>.lifted(): FlowProcessor<UnAckedConsumerRecord<K, V>> {
     return object : FlowProcessor<UnAckedConsumerRecord<K, V>> {
-        override suspend fun send(item: UnAckedConsumerRecord<K, V>) {
-            this@lifted.send(item.toConsumerRecord())
+        override suspend fun send(item: UnAckedConsumerRecord<K, V>, e: Throwable) {
+            this@lifted.send(item.toConsumerRecord(), e)
         }
 
         override suspend fun process(item: UnAckedConsumerRecord<K, V>, attempt: Int) {
