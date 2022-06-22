@@ -50,7 +50,10 @@ fun <T> retryFlow(
                 .onStart {
                     log.trace { "${strategy.value.name} --> Retrying records in group:${strategy.key} lastAttempted:$lastAttempted" }
                 }
-                .map { it.copy(attempt = it.attempt.inc()) }
+                .map {
+                    it.attempt = it.attempt.inc()
+                    it
+                }
                 .tryMap(onFailure) {
                     flowRetry.process(it.data, it.attempt)
 
