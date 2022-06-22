@@ -30,7 +30,7 @@ class SimpleChannelFlowRetry<T>(
         onSuccess.invoke(item.data)
     }
 
-    override suspend fun onFailure(item: RetryRecord<T>) {
+    override suspend fun onFailure(item: RetryRecord<T>, e: Throwable) {
         onFailure.invoke(item.data)
     }
 }

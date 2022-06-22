@@ -43,7 +43,7 @@ fun <T> retryFlow(
 
             val onFailure: suspend (RetryRecord<T>, Throwable) -> Unit = { rec, it ->
                 strategy.value.onFailure("", it)
-                flowRetry.onFailure(rec)
+                flowRetry.onFailure(rec, it)
             }
 
             flowRetry.produceNext(strategy.key, lastAttempted)

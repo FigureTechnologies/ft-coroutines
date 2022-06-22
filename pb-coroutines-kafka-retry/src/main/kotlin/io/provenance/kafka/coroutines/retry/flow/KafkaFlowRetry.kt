@@ -48,9 +48,7 @@ open class KafkaFlowRetry<K, V>(
         store.remove(item.data)
     }
 
-    override suspend fun onFailure(
-        item: RetryRecord<ConsumerRecord<K, V>>
-    ) {
+    override suspend fun onFailure(item: RetryRecord<ConsumerRecord<K, V>>, e: Throwable) {
         log.debug { "failed reprocess attempt:${item.attempt} Error: ${item.lastException} key:${item.data.key()} source:${item.data.topic()}-${item.data.partition()}" }
         store.putOne(item.data) { it.copy(attempt = it.attempt.inc(), lastAttempted = OffsetDateTime.now()) }
     }

@@ -29,5 +29,5 @@ interface FlowRetry<T> : FlowProcessor<T> {
      *
      * @param item The item that was unsuccessfully retried.
      */
-    suspend fun onFailure(item: RetryRecord<T>)
+    suspend fun onFailure(item: RetryRecord<T>, e: Throwable)
 }

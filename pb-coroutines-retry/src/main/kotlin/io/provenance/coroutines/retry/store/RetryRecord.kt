@@ -3,10 +3,10 @@ package io.provenance.coroutines.retry.store
 import java.time.OffsetDateTime
 
 open class RetryRecord<T>(
-    val data: T,
-    val attempt: Int = 0,
-    val lastAttempted: OffsetDateTime = OffsetDateTime.now(),
-    val lastException: String
+    var data: T,
+    var attempt: Int = 0,
+    var lastAttempted: OffsetDateTime = OffsetDateTime.now(),
+    var lastException: String = ""
 ) {
     fun copy(
         data: T = this.data,
