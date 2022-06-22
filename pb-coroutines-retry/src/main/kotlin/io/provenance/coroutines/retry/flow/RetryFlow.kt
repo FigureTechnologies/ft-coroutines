@@ -43,14 +43,17 @@ fun <T> retryFlow(
 
             val onFailure: suspend (RetryRecord<T>, Throwable) -> Unit = { rec, it ->
                 strategy.value.onFailure("", it)
-                flowRetry.onFailure(rec)
+                flowRetry.onFailure(rec, it)
             }
 
             flowRetry.produceNext(strategy.key, lastAttempted)
                 .onStart {
                     log.trace { "${strategy.value.name} --> Retrying records in group:${strategy.key} lastAttempted:$lastAttempted" }
                 }
-                .map { it.copy(attempt = it.attempt.inc()) }
+                .map {
+                    it.attempt = it.attempt.inc()
+                    it
+                }
                 .tryMap(onFailure) {
                     flowRetry.process(it.data, it.attempt)
 
