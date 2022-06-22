@@ -43,7 +43,6 @@ open class KafkaFlowRetry<K, V>(
                 this.attempt = 0
                 this.lastAttempted = OffsetDateTime.now()
                 this.lastException = e.localizedMessage
-
             }
         }
     }
