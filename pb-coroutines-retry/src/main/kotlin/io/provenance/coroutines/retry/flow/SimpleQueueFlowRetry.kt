@@ -22,8 +22,8 @@ class SimpleChannelFlowRetry<T>(
         block(item, attempt)
     }
 
-    override suspend fun produceNext(attemptRange: IntRange, olderThan: OffsetDateTime): Flow<RetryRecord<T>> {
-        return queue.receiveQueued().asFlow()
+    override suspend fun produceNext(attemptRange: IntRange, olderThan: OffsetDateTime, limit: Int): Flow<RetryRecord<T>> {
+        return queue.receiveQueued(limit).asFlow()
     }
 
     override suspend fun onSuccess(item: RetryRecord<T>) {

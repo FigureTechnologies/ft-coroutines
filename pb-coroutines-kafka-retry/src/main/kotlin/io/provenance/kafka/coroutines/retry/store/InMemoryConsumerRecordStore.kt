@@ -13,11 +13,13 @@ fun <K, V> inMemoryConsumerRecordStore(
 
     override suspend fun select(
         attemptRange: IntRange,
-        lastAttempted: OffsetDateTime
+        lastAttempted: OffsetDateTime,
+        limit: Int,
     ): List<RetryRecord<ConsumerRecord<K, V>>> {
         return data
             .filter { it.attempt in attemptRange && it.lastAttempted.isBefore(lastAttempted) }
             .sortedBy { it.data.timestamp() }
+            .take(limit)
     }
 
     override suspend fun getOne(

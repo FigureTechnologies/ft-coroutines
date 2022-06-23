@@ -32,6 +32,7 @@ internal val DEFAULT_RETRY_INTERVAL = 10.seconds
 fun <T> retryFlow(
     flowRetry: FlowRetry<T>,
     retryInterval: Duration = DEFAULT_RETRY_INTERVAL,
+    batchSize: Int = DEFAULT_FETCH_LIMIT,
     retryStrategies: List<RetryStrategy> = defaultRetryStrategies
 ): Flow<T> {
     val log = KotlinLogging.logger {}
@@ -46,7 +47,7 @@ fun <T> retryFlow(
                 flowRetry.onFailure(rec, it)
             }
 
-            flowRetry.produceNext(strategy.key, lastAttempted)
+            flowRetry.produceNext(strategy.key, lastAttempted, batchSize)
                 .onStart {
                     log.trace { "${strategy.value.name} --> Retrying records in group:${strategy.key} lastAttempted:$lastAttempted" }
                 }

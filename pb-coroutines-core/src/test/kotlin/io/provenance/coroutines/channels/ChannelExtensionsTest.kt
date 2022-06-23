@@ -3,6 +3,7 @@ package io.provenance.coroutines.channels
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.collections.shouldBeSorted
 import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.toList
 
@@ -25,8 +26,29 @@ class ChannelExtensionsTest : AnnotationSpec() {
         val chan = list.asChannel()
 
         val recv = chan.receiveQueued()
-        val recvList = recv.toList()
         recv.shouldContainAll(list)
+        recv.shouldBeSorted()
+    }
+
+    @Test
+    suspend fun testReceiveChannelReceiveQueuedLimited() {
+        val list = listOf<Int>() + 1 + 2 + 3
+        val chan = list.asChannel()
+
+        val recv = chan.receiveQueued(1)
+        recv.shouldContainAll(list.subList(0, 0))
+        recv.shouldBeSorted()
+        recv.first().shouldBe(1)
+    }
+
+    @Test
+    suspend fun testReceiveChannelReceiveQueuedLimitedBounded() {
+        val list = listOf<Int>() + 1 + 2 + 3
+        val chan = list.asChannel()
+
+        val recv = chan.receiveQueued(100)
+        recv.shouldContainAll(list)
+        recv.size.shouldBe(3)
         recv.shouldBeSorted()
     }
 }

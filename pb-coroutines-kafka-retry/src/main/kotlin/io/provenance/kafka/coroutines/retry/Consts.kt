@@ -3,7 +3,7 @@ package io.provenance.kafka.coroutines.retry
 /**
  *
  */
-const val DEFAULT_RECORD_REPROCESS_GROUP_SIZE = 10
+internal const val DEFAULT_RECORD_REPROCESS_GROUP_SIZE = 40
 
 /**
  *

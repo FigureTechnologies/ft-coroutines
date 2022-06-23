@@ -30,8 +30,9 @@ open class KafkaFlowRetry<K, V>(
 
     override suspend fun produceNext(
         attemptRange: IntRange,
-        olderThan: OffsetDateTime
-    ) = store.select(attemptRange, olderThan).sortedByDescending { it.lastAttempted }.take(groupSize).asFlow()
+        olderThan: OffsetDateTime,
+        limit: Int,
+    ) = store.select(attemptRange, olderThan, limit).sortedByDescending { it.lastAttempted }.asFlow()
 
     override suspend fun send(
         item: ConsumerRecord<K, V>,
