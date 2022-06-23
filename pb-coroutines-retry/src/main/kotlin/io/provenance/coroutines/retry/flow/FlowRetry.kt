@@ -13,9 +13,10 @@ interface FlowRetry<T> : FlowProcessor<T> {
      *
      * @param attemptRange Only select records with [RetryRecord.attempt] in [attemptRange].
      * @param olderThan Only select records with [RetryRecord.lastAttempted] being before [olderThan].
+     * @param limit Limit the returned result to a set count of records.
      * @return A [Flow] of [RetryRecord] to process and feed into [process].
      */
-    suspend fun produceNext(attemptRange: IntRange, olderThan: OffsetDateTime): Flow<RetryRecord<T>>
+    suspend fun produceNext(attemptRange: IntRange, olderThan: OffsetDateTime, limit: Int = DEFAULT_FETCH_LIMIT): Flow<RetryRecord<T>>
 
     /**
      * Callback executed after successful processing of [process].
