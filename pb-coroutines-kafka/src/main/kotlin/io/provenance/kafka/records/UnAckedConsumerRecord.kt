@@ -58,3 +58,8 @@ class UnAckedConsumerRecordImpl<K, V>(
             value:$value)
         """.trimIndent().split('\n').joinToString { it.trim() }
 }
+
+@JvmInline
+value class UnAckedConsumerRecords<K, V>(val records: List<UnAckedConsumerRecord<K, V>>) : Iterable<UnAckedConsumerRecord<K, V>> {
+    override fun iterator(): Iterator<UnAckedConsumerRecord<K, V>> = records.iterator()
+}
