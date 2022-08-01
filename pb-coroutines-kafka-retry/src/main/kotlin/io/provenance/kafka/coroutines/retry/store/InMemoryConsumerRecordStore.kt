@@ -30,19 +30,19 @@ fun <K, V> inMemoryConsumerRecordStore(
 
     override suspend fun putOne(
         item: ConsumerRecord<K, V>,
-        e: Throwable?,
+        lastException: Throwable?,
         mutator: RetryRecord<ConsumerRecord<K, V>>.() -> Unit
     ) {
         val record = getOne(item)
         if (record == null) {
-            data += RetryRecord(item, 0, OffsetDateTime.now(), e?.message.orEmpty()).also {
-                log.debug { "putting new entry for $item" }
+            data += RetryRecord(item, 0, OffsetDateTime.now(), lastException?.message.orEmpty()).also {
+                log.debug { "putting new entry for ${item.key()}" }
             }
             return
         }
 
         data[data.indexOf(record)].mutator().also {
-            log.debug { "incrementing attempt for $it" }
+            log.debug { "incrementing attempt for $record" }
         }
     }
 

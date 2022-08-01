@@ -1,5 +1,6 @@
 package io.provenance.kafka.coroutines.channels
 
+import io.provenance.kafka.loggingConsumerRebalanceListener
 import io.provenance.kafka.records.CommitConsumerRecord
 import io.provenance.kafka.records.UnAckedConsumerRecordImpl
 import io.provenance.kafka.records.UnAckedConsumerRecords
@@ -19,6 +20,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.selects.SelectClause1
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.Consumer
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener
 import org.apache.kafka.clients.consumer.KafkaConsumer
 
 /**
@@ -38,7 +40,8 @@ fun <K, V> kafkaConsumerChannel(
     name: String = "kafka-channel",
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
-    init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
+    rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
+    init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
 ): ReceiveChannel<UnAckedConsumerRecords<K, V>> {
     return KafkaConsumerChannel(consumerProperties, topics, name, pollInterval, consumer, init).also {
         Runtime.getRuntime().addShutdownHook(
