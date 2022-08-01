@@ -10,14 +10,8 @@ suspend fun <K, V> UnAckedConsumerRecord<K, V>.acking(
     return ack()
 }
 
-fun <K, V> Flow<UnAckedConsumerRecord<K, V>>.acking(
-    every: Int = 1,
+fun <K, V> Flow<UnAckedConsumerRecords<K, V>>.acking(
     block: suspend (UnAckedConsumerRecord<K, V>) -> Unit = {}
 ): Flow<AckedConsumerRecord<K, V>> {
-    var current = 0
-    return transform {
-        if (current++ % every == 0) {
-            emit(it.acking(block))
-        }
-    }
+    return transform { it.forEach { record -> emit(record.acking(block)) } }
 }

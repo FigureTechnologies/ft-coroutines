@@ -64,17 +64,17 @@ fun main(args: Array<String>) {
 
             while (true) {
                 select<Unit> {
-                    incoming.onReceive {
-                        log.info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
-
-                        val rec = it
-                        producer.onSend(ProducerRecord(dest, it.key, it.value)) {
-                            val ack = rec.ack()
-                            log.info("post-commit: ${ack.key} // ${ack.value} @ ${rec.offset}")
+                    incoming.onReceive { recordSet ->
+                        recordSet.forEach { rec ->
+                            log.info("pre-commit: ${rec.key} // ${rec.value} on ${rec.topic}-${rec.partition}@${rec.offset}")
+                            producer.onSend(ProducerRecord(dest, rec.key, rec.value)) {
+                                val ack = rec.ack()
+                                log.info("post-commit: ${ack.key} // ${ack.value} @ ${rec.offset}")
+                            }
                         }
                     }
 
-                    // Periodically send messages to kafka so we have something to consumer in the other coroutine above.
+                    // Periodically send messages to kafka so that we have something to consumer in the other coroutine above.
                     ticker.onReceive {
                         log.info("ticker")
                         producer.send(ProducerRecord(source, dest, "test-${i.getAndIncrement()}"))
@@ -92,15 +92,17 @@ fun main(args: Array<String>) {
         //
 
         launch(Dispatchers.IO) {
-            incoming.receiveAsFlow().buffer().onEach {
-                log.info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
-                producer.send(ProducerRecord(dest, it.key, it.value))
-                val ack = it.ack()
-                log.info("post-commit: ${ack.key} // ${ack.value} @ ${it.offset}")
+            incoming.receiveAsFlow().buffer().onEach { recordSet ->
+                recordSet.forEach {
+                    log.info("pre-commit: ${it.key} // ${it.value} on ${it.topic}-${it.partition}@${it.offset}")
+                    producer.send(ProducerRecord(dest, it.key, it.value))
+                    val ack = it.ack()
+                    log.info("post-commit: ${ack.key} // ${ack.value} @ ${it.offset}")
+                }
             }.collect()
         }
 
-        // Periodically send messages to kafka so we have something to consumer in the other coroutine above.
+        // Periodically send messages to kafka so that we have something to consumer in the other coroutine above.
         launch(Dispatchers.IO) {
             val ticker = ticker(5000)
             val i = AtomicInteger(0)

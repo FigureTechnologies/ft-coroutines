@@ -2,6 +2,7 @@ package io.provenance.kafka.cli
 
 import ch.qos.logback.classic.Level
 import io.provenance.coroutines.retry.flow.retryFlow
+import io.provenance.coroutines.retry.tryOnEachProcess
 import io.provenance.coroutines.tryOnEach
 import io.provenance.kafka.records.acking
 import io.provenance.kafka.coroutines.channels.kafkaConsumerChannel
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging

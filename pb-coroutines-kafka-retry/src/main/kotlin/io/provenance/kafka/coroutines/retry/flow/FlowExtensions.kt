@@ -3,6 +3,7 @@ package io.provenance.kafka.coroutines.retry.flow
 import io.provenance.coroutines.retry.flow.FlowProcessor
 import io.provenance.kafka.coroutines.retry.tryOnEach
 import io.provenance.kafka.records.UnAckedConsumerRecord
+import io.provenance.kafka.records.UnAckedConsumerRecords
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
 /**
@@ -10,14 +11,14 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
  *
  * This is needed to match the flow type of [tryOnEach] when processing with [KafkaFlowRetry].
  */
-fun <K, V> FlowProcessor<ConsumerRecord<K, V>>.lifted(): FlowProcessor<UnAckedConsumerRecord<K, V>> {
-    return object : FlowProcessor<UnAckedConsumerRecord<K, V>> {
-        override suspend fun send(item: UnAckedConsumerRecord<K, V>, e: Throwable) {
-            this@lifted.send(item.toConsumerRecord(), e)
+fun <K, V> FlowProcessor<ConsumerRecord<K, V>>.lifted(): FlowProcessor<UnAckedConsumerRecords<K, V>> {
+    return object : FlowProcessor<UnAckedConsumerRecords<K, V>> {
+        override suspend fun send(item: UnAckedConsumerRecords<K, V>, e: Throwable) {
+            item.forEach { this@lifted.send(it.toConsumerRecord(), e) }
         }
 
-        override suspend fun process(item: UnAckedConsumerRecord<K, V>, attempt: Int) {
-            this@lifted.process(item.toConsumerRecord())
+        override suspend fun process(item: UnAckedConsumerRecords<K, V>, attempt: Int) {
+            item.forEach { this@lifted.process(it.toConsumerRecord()) }
         }
     }
 }
