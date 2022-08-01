@@ -14,6 +14,7 @@ import io.provenance.kafka.coroutines.retry.toByteArray
 import io.provenance.kafka.coroutines.retry.toInt
 import io.provenance.kafka.coroutines.retry.tryOnEach
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -23,6 +24,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.apache.kafka.clients.CommonClientConfigs
+import org.apache.kafka.clients.admin.AdminClient
+import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -66,8 +69,10 @@ fun main() = runBlocking {
     }
 
     val idx = 1
-    i.send(ProducerRecord("input", idx.toByteArray(), "some value".toByteArray()))
-    delay(1.days)
+    while (true) {
+        i.send(ProducerRecord("input", idx.toByteArray(), "some value".toByteArray()))
+        delay(4.seconds)
+    }
 }
 
 private fun someHandler(): suspend (ConsumerRecord<ByteArray, ByteArray>) -> Unit = fn@{
