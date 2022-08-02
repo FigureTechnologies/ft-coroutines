@@ -1,6 +1,6 @@
 [versions]
 kafka = "3.2.0"
-kotlinxCore = "1.6.1"
+kotlinxCore = "1.6.4"
 kotlinxCli = "0.3.4"
 kotlinxDateTime = "0.3.0"
 kotlinLogging = "2.1.21"
