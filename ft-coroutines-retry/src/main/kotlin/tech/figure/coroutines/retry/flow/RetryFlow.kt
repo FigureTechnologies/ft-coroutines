@@ -46,7 +46,6 @@ fun <T> retryFlow(
                 strategy.value.onFailure("", it)
                 flowRetry.onFailure(rec, it)
             }
-            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
             flowRetry.produceNext(strategy.key, lastAttempted, batchSize)
                 .onStart {
@@ -57,12 +56,10 @@ fun <T> retryFlow(
                     it
                 }
                 .tryMap(onFailure) {
-                    scope.launch {
-                        flowRetry.process(it.data, it.attempt)
+                    flowRetry.process(it.data, it.attempt)
 
-                        log.debug { "retry succeeded on attempt:${it.attempt} rec:${it.data}" }
-                        flowRetry.onSuccess(it)
-                    }
+                    log.debug { "retry succeeded on attempt:${it.attempt} rec:${it.data}" }
+                    flowRetry.onSuccess(it)
                 }
                 .collect()
         }

@@ -11,7 +11,7 @@ A collection of kotlin coroutines flow based projects to create channels and flo
 
 [license-badge]: https://img.shields.io/github/license/FigureTechnologies/ft-coroutines.svg
 [license-url]: https://github.com/FigureTechnologies/ft-coroutines/blob/main/LICENSE
-[maven-badge]: https://maven-badges.herokuapp.com/maven-central/FigureTechnologies/ft-coroutines-core/badge.svg
+[maven-badge]: https://maven-badges.herokuapp.com/maven-central/tech.figure/ft-coroutines-core/badge.svg
 [maven-url]: https://maven-badges.herokuapp.com/maven-central/tech.figure.coroutines/ft-coroutines-core
 [release-badge]: https://img.shields.io/github/tag/FigureTechnologies/ft-coroutines.svg
 [release-latest]: https://github.com/FigureTechnologies/ft-coroutines/releases/latest
