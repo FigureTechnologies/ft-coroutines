@@ -61,7 +61,7 @@ configure<PublishingExtension> {
                 scm {
                     developerConnection.set("git@github.com:FigureTechnologies/ft-coroutines.git")
                     connection.set("https://github.com/FigureTechnologies/ft-coroutines.git")
-                    url.set("https://github.com/FigureTechnologies/ft-coroutines.git")
+                    url.set("https://github.com/FigureTechnologies/ft-coroutines")
                 }
             }
         }
