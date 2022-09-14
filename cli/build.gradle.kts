@@ -11,10 +11,10 @@ dependencies {
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    implementation(projects.pbCoroutinesCore)
-    implementation(projects.pbCoroutinesRetry)
-    implementation(projects.pbCoroutinesKafka)
-    implementation(projects.pbCoroutinesKafkaRetry)
+    implementation(projects.ftCoroutinesCore)
+    implementation(projects.ftCoroutinesRetry)
+    implementation(projects.ftCoroutinesKafka)
+    implementation(projects.ftCoroutinesKafkaRetry)
 
     implementation(libs.bundles.logback)
     implementation(libs.bundles.kotlinxCoroutines)

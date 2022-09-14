@@ -1,4 +1,4 @@
-package io.provenance.kafka.cli
+package tech.figure.kafka.cli
 
 import ch.qos.logback.classic.Level
 import org.slf4j.Logger

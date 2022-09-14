@@ -9,14 +9,14 @@ A collection of kotlin coroutines flow based projects to create channels and flo
 [![Apache 2.0 License][license-badge]][license-url]
 [![LOC][loc-badge]][loc-report]
 
-[license-badge]: https://img.shields.io/github/license/provenance-io/kafka-coroutines.svg
-[license-url]: https://github.com/provenance-io/kafka-coroutines/blob/main/LICENSE
-[maven-badge]: https://maven-badges.herokuapp.com/maven-central/io.provenance/pb-coroutines-core/badge.svg
-[maven-url]: https://maven-badges.herokuapp.com/maven-central/io.provenance.coroutines/pb-coroutines-core
-[release-badge]: https://img.shields.io/github/tag/provenance-io/pb-coroutines.svg
-[release-latest]: https://github.com/provenance-io/pb-coroutines/releases/latest
-[loc-badge]: https://tokei.rs/b1/github/provenance-io/pb-coroutines
-[loc-report]: https://github.com/provenance-io/pb-coroutines
+[license-badge]: https://img.shields.io/github/license/FigureTechnologies/ft-coroutines.svg
+[license-url]: https://github.com/FigureTechnologies/ft-coroutines/blob/main/LICENSE
+[maven-badge]: https://maven-badges.herokuapp.com/maven-central/FigureTechnologies/ft-coroutines-core/badge.svg
+[maven-url]: https://maven-badges.herokuapp.com/maven-central/tech.figure.coroutines/ft-coroutines-core
+[release-badge]: https://img.shields.io/github/tag/FigureTechnologies/ft-coroutines.svg
+[release-latest]: https://github.com/FigureTechnologies/ft-coroutines/releases/latest
+[loc-badge]: https://tokei.rs/b1/github/FigureTechnologies/ft-coroutines
+[loc-report]: https://github.com/FigureTechnologies/ft-coroutines
 
 ## Installation
 
@@ -25,18 +25,18 @@ A collection of kotlin coroutines flow based projects to create channels and flo
 ```xml
 <dependencies>
     <dependency>
-        <groupId>io.provenance.coroutines</groupId>
-        <artifactId>pb-coroutines-core</artifactId>
+        <groupId>tech.figure.coroutines</groupId>
+        <artifactId>ft-coroutines-core</artifactId>
         <version>${version}</version>
     </dependency>
     <dependency>
-        <groupId>io.provenance.coroutines</groupId>
-        <artifactId>pb-coroutines-kafka</artifactId>
+        <groupId>tech.figure.coroutines</groupId>
+        <artifactId>ft-coroutines-kafka</artifactId>
         <version>${version}</version>
     </dependency>
     <dependency>
-        <groupId>io.provenance.coroutines</groupId>
-        <artifactId>pb-coroutines-retry</artifactId>
+        <groupId>tech.figure.coroutines</groupId>
+        <artifactId>ft-coroutines-retry</artifactId>
         <version>${version}</version>
     </dependency>
 </dependencies>
@@ -49,9 +49,9 @@ A collection of kotlin coroutines flow based projects to create channels and flo
 In `build.gradle`:
 
 ```groovy
-implementation 'io.provenance.coroutines:pb-coroutines-core:${version}'
-implementation 'io.provenance.coroutines:pb-coroutines-kafka:${version}'
-implementation 'io.provenance.coroutines:pb-coroutines-retry:${version}'
+implementation 'tech.figure.coroutines:ft-coroutines-core:${version}'
+implementation 'tech.figure.coroutines:ft-coroutines-kafka:${version}'
+implementation 'tech.figure.coroutines:ft-coroutines-retry:${version}'
 ```
 
 #### Kotlin
@@ -59,9 +59,9 @@ implementation 'io.provenance.coroutines:pb-coroutines-retry:${version}'
 In `build.gradle.kts`:
 
 ```kotlin
-implementation("io.provenance.coroutines", "pb-coroutines-core", version)
-implementation("io.provenance.coroutines", "pb-coroutines-kafka", version)
-implementation("io.provenance.coroutines", "pb-coroutines-retry", version)
+implementation("tech.figure.coroutines", "ft-coroutines-core", version)
+implementation("tech.figure.coroutines", "ft-coroutines-kafka", version)
+implementation("tech.figure.coroutines", "ft-coroutines-retry", version)
 ```
 
 ## Usage
