@@ -24,7 +24,7 @@ configure<PublishingExtension> {
             pom {
                 name.set("Kafka Coroutine Implementation")
                 description.set("Library for reading from and writing to Kafka from Kotlin coroutines")
-                url.set("https://provenance.io")
+                url.set("https://www.figure.tech/")
                 licenses {
                     license {
                         name.set("The Apache License, Version 2.0")

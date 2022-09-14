@@ -25,5 +25,5 @@ dependencies {
 }
 
 application {
-    mainClass.set("io.provenance.kafka.cli.MainKt")
+    mainClass.set("tech.figure.kafka.cli.MainKt")
 }
