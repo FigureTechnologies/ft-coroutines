@@ -9,14 +9,10 @@ import kotlinx.cli.required
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ticker
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.selects.select
@@ -31,9 +27,6 @@ import tech.figure.kafka.context.dropKafkaContext
 import tech.figure.kafka.context.withKafkaContext
 import tech.figure.kafka.coroutines.channels.kafkaConsumerChannel
 import tech.figure.kafka.coroutines.channels.kafkaProducerChannel
-import tech.figure.kafka.records.AckedConsumerRecord
-import tech.figure.kafka.records.UnAckedConsumerRecord
-import tech.figure.kafka.records.UnAckedConsumerRecords
 
 @OptIn(ObsoleteCoroutinesApi::class)
 fun main(args: Array<String>) {
