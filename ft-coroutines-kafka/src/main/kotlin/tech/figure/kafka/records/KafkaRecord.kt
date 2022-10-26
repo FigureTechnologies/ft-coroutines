@@ -7,6 +7,12 @@ import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.record.TimestampType
 
 interface KafkaRecord<K, V> {
+    companion object {
+        fun <K, V> wrapping(consumerRecord: ConsumerRecord<K, V>): KafkaRecord<K, V> {
+            return tech.figure.kafka.records.wrapping(consumerRecord)
+        }
+    }
+
     val topic: String
     val partition: Int
     val offset: Long
