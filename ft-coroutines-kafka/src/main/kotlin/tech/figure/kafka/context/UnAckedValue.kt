@@ -8,4 +8,7 @@ class UnAckedValue<K, V, T>(
 ) {
     suspend fun ack(): AckedValue<K, V, T> =
         AckedValue(records.map { it.ack() }, data)
+
+    fun <R> map(block: (T) -> R): UnAckedValue<K, V, R> =
+        UnAckedValue(records, block(data))
 }
