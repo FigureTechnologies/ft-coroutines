@@ -2,7 +2,7 @@ package tech.figure.kafka.context
 
 import tech.figure.kafka.records.AckedConsumerRecord
 
-class AckedValue<K, V, T>(
-    val records: List<AckedConsumerRecord<K, V>>,
-    val data: T
-)
+data class AckedConsumerRecordValue<K, V, T>(val record: AckedConsumerRecord<K, V>, val value: T) {
+    fun <R> map(block: (T) -> R): AckedConsumerRecordValue<K, V, R> =
+        AckedConsumerRecordValue(record, block(value))
+}
