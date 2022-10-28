@@ -1,9 +1,7 @@
 package tech.figure.kafka.cli
 
 import ch.qos.logback.classic.Level
-import tech.figure.kafka.coroutines.channels.kafkaConsumerChannel
-import tech.figure.kafka.coroutines.channels.kafkaProducerChannel
-import java.time.OffsetDateTime
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -13,6 +11,7 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -25,6 +24,10 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
+import tech.figure.kafka.context.acking
+import tech.figure.kafka.context.withValue
+import tech.figure.kafka.coroutines.channels.kafkaConsumerChannel
+import tech.figure.kafka.coroutines.channels.kafkaProducerChannel
 
 @OptIn(ObsoleteCoroutinesApi::class)
 fun main(args: Array<String>) {
@@ -36,8 +39,10 @@ fun main(args: Array<String>) {
     parser.parse(args)
 
     val commonProps = mapOf<String, Any>(
-        CommonClientConfigs.GROUP_ID_CONFIG to group + OffsetDateTime.now().minute,
+        CommonClientConfigs.GROUP_ID_CONFIG to UUID.randomUUID().toString(),
         CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to broker,
+        ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
+        ConsumerConfig.MAX_POLL_RECORDS_CONFIG to 100,
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
         ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to StringSerializer::class.java,
@@ -46,6 +51,7 @@ fun main(args: Array<String>) {
 
     log {
         "org.apache.kafka".level = Level.WARN
+        "tech.figure.kafka.coroutines.channels.KafkaConsumerChannel".level = Level.INFO
     }
 
     val log = logger("main")
@@ -108,8 +114,16 @@ fun main(args: Array<String>) {
             val i = AtomicInteger(0)
             ticker.receiveAsFlow().onEach {
                 log.info("ticker")
-                producer.send(ProducerRecord(source, dest, "test-${i.getAndIncrement()}"))
+                producer.send(ProducerRecord(source, "test-${i.getAndIncrement()}", "testing"))
             }.collect()
+        }
+
+        launch(Dispatchers.IO) {
+            incoming.receiveAsFlow()
+                .map { it.map { it.withValue(it.offset) } }
+                .acking()
+                .onEach { log.info("committed offset:$it") }
+                .collect()
         }
     }
 }
