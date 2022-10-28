@@ -11,6 +11,7 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -23,8 +24,8 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
-import tech.figure.kafka.context.dropKafkaContext
-import tech.figure.kafka.context.withKafkaContext
+import tech.figure.kafka.context.acking
+import tech.figure.kafka.context.withValue
 import tech.figure.kafka.coroutines.channels.kafkaConsumerChannel
 import tech.figure.kafka.coroutines.channels.kafkaProducerChannel
 
@@ -119,10 +120,8 @@ fun main(args: Array<String>) {
 
         launch(Dispatchers.IO) {
             incoming.receiveAsFlow()
-                .withKafkaContext()
-                .map { it.records.map { it.offset } }
+                .map { it.map { it.withValue(it.offset) } }
                 .acking()
-                .dropKafkaContext()
                 .onEach { log.info("committed offset:$it") }
                 .collect()
         }

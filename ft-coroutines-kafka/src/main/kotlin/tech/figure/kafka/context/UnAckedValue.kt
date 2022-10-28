@@ -7,7 +7,7 @@ import tech.figure.kafka.records.UnAckedConsumerRecord
 fun <K, V, T> UnAckedConsumerRecord<K, V>.withValue(t: T) = UnAckedConsumerRecordValue(this, t)
 
 fun <K, V, T> Flow<List<UnAckedConsumerRecordValue<K, V, T>>>.acking(): Flow<List<AckedConsumerRecordValue<K, V, T>>> =
-    map { it.map { it.ack()  } }
+    map { it.map { it.ack() } }
 
 data class UnAckedConsumerRecordValue<K, V, T>(val record: UnAckedConsumerRecord<K, V>, val value: T) {
     suspend fun ack(): AckedConsumerRecordValue<K, V, T> =
