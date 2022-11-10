@@ -11,6 +11,9 @@ fun <K, V> inMemoryConsumerRecordStore(
 ) = object : RetryRecordStore<ConsumerRecord<K, V>> {
     val log = KotlinLogging.logger {}
 
+    override suspend fun isEmpty(): Boolean =
+        data.isEmpty()
+
     override suspend fun select(
         attemptRange: IntRange,
         lastAttempted: OffsetDateTime,

@@ -28,6 +28,8 @@ open class KafkaFlowRetry<K, V>(
 ) : FlowRetry<ConsumerRecord<K, V>> {
     private val log = KotlinLogging.logger {}
 
+    override suspend fun hasNext(): Boolean = !store.isEmpty()
+
     override suspend fun produceNext(
         attemptRange: IntRange,
         olderThan: OffsetDateTime,
