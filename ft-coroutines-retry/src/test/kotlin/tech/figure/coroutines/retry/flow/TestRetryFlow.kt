@@ -25,7 +25,8 @@ class TestRetryFlow : AnnotationSpec() {
         onFailure: (item: T) -> Unit,
         block: (item: T, attempt: Int) -> Unit,
     ): SimpleChannelFlowRetry<T> {
-        return SimpleChannelFlowRetry(list.asChannel(),
+        return SimpleChannelFlowRetry(
+            queue = list.asChannel(),
             onSuccess = onSuccess,
             onFailure = onFailure,
             block = block

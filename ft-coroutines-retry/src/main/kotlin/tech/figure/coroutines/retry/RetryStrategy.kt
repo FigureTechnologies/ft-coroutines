@@ -26,7 +26,7 @@ val defaultRetryStrategies = listOf(
     RetryStrategy(1.hours, 5),
     RetryStrategy(3.hours, 2),
     RetryStrategy(1.days, 8),
-    RetryStrategy(1.days, Int.MAX_VALUE-23)  // max - sum of other retry counts. otherwise it overflows to Int.MIN_VALUE
+    RetryStrategy(1.days, Int.MAX_VALUE - 23) // max - sum of other retry counts. otherwise it overflows to Int.MIN_VALUE
 )
 
 internal fun List<RetryStrategy>.invert(): Map<IntRange, RetryStrategy> {
