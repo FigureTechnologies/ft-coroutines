@@ -8,5 +8,6 @@ open class RetryRecord<T>(
     var lastAttempted: OffsetDateTime = OffsetDateTime.now(),
     var lastException: String = ""
 ) {
-    override fun toString(): String = "RetryRecord(attempt:$attempt Exception:$lastException lastAttempted:$lastAttempted data:$data)"
+    override fun toString(): String =
+        "RetryRecord(attempt:$attempt Exception:$lastException lastAttempted:$lastAttempted data:$data)"
 }

@@ -1,14 +1,8 @@
 package tech.figure.coroutines.retry.flow
 
-import tech.figure.coroutines.retry.RetryStrategy
-import tech.figure.coroutines.retry.defaultRetryStrategies
-import tech.figure.coroutines.retry.invert
-import tech.figure.coroutines.retry.store.RetryRecord
-import tech.figure.coroutines.tryMap
 import java.time.OffsetDateTime
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +10,11 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import mu.KotlinLogging
+import tech.figure.coroutines.retry.RetryStrategy
+import tech.figure.coroutines.retry.defaultRetryStrategies
+import tech.figure.coroutines.retry.invert
+import tech.figure.coroutines.retry.store.RetryRecord
+import tech.figure.coroutines.tryMap
 
 internal val DEFAULT_RETRY_INTERVAL = 10.seconds
 
@@ -28,7 +27,7 @@ internal val DEFAULT_RETRY_INTERVAL = 10.seconds
  *
  * Once a record is successfully processed, emit the data element out to the flow.
  */
-@OptIn(ExperimentalTime::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 fun <T> retryFlow(
     flowRetry: FlowRetry<T>,
     retryInterval: Duration = DEFAULT_RETRY_INTERVAL,
@@ -39,6 +38,10 @@ fun <T> retryFlow(
     val strategies = retryStrategies.invert()
 
     return pollingFlow(retryInterval) {
+        if (!flowRetry.hasNext()) {
+            return@pollingFlow
+        }
+
         for (strategy in strategies) {
             val lastAttempted = OffsetDateTime.now().minus(strategy.value.lastAttempted.toJavaDuration())
 

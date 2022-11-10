@@ -9,6 +9,13 @@ import kotlinx.coroutines.flow.Flow
  */
 interface FlowRetry<T> : FlowProcessor<T> {
     /**
+     * Determine if there is anything in the hopper to process.
+     *
+     * @return True if there are pending items, false otherwise
+     */
+    suspend fun hasNext(): Boolean
+
+    /**
      * Generate the next group of items to retry.
      *
      * @param attemptRange Only select records with [RetryRecord.attempt] in [attemptRange].
