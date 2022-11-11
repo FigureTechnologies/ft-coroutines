@@ -36,6 +36,7 @@ fun <T> retryFlow(
     val log = KotlinLogging.logger {}
     val strategies = retryStrategies.invert()
 
+    log.info { "initializing polling retry flow ${flowRetry.javaClass.name}" }
     return pollingFlow(retryInterval) {
         if (!flowRetry.hasNext()) {
             return@pollingFlow
@@ -54,6 +55,7 @@ fun <T> retryFlow(
                     log.trace { "${strategy.value.name} --> Retrying records in group:${strategy.key} lastAttempted:$attemptedBefore" }
                 }
                 .tryMap(onFailure) {
+                    log.debug { "retry processing attempt:${it.attempt} rec:${it.data}" }
                     flowRetry.process(it.data, it.attempt)
 
                     log.debug { "retry succeeded on attempt:${it.attempt} rec:${it.data}" }
