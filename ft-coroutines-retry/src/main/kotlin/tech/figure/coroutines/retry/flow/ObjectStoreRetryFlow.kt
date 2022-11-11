@@ -43,7 +43,7 @@ internal open class RecordStoreFlowRetry<T>(
             .asFlow()
 
     override suspend fun send(item: T, e: Throwable) =
-        store.update(item, e)
+        store.insert(item, e)
 
     override suspend fun onSuccess(item: RetryRecord<T>) =
         store.remove(item.data)
