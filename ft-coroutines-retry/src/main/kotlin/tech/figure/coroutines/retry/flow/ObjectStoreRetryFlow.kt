@@ -17,7 +17,7 @@ fun <T> recordStoreFlowRetry(
     handler: suspend (T) -> Unit,
     store: RetryRecordStore<T>,
     groupSize: Int = 40,
-) : FlowRetry<T> = RecordStoreFlowRetry(handler, store, groupSize)
+): FlowRetry<T> = RecordStoreFlowRetry(handler, store, groupSize)
 
 /**
  * Retry a flow of objects using the backing [store].
