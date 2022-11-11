@@ -6,7 +6,8 @@ import java.time.OffsetDateTime
 interface RetryRecordStore<T> {
     suspend fun isEmpty(): Boolean
     suspend fun select(attemptRange: IntRange, lastAttempted: OffsetDateTime, limit: Int = DEFAULT_FETCH_LIMIT): List<RetryRecord<T>>
-    suspend fun getOne(item: T): RetryRecord<T>?
-    suspend fun putOne(item: T, lastException: Throwable? = null, mutator: RetryRecord<T>.() -> Unit)
+    suspend fun get(item: T): RetryRecord<T>?
+    suspend fun insert(item: T, e: Throwable? = null)
+    suspend fun update(item: T, e: Throwable? = null)
     suspend fun remove(item: T)
 }

@@ -7,7 +7,6 @@ import kotlin.time.toJavaDuration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import mu.KotlinLogging
 import tech.figure.coroutines.retry.RetryStrategy
@@ -43,20 +42,16 @@ fun <T> retryFlow(
         }
 
         for (strategy in strategies) {
-            val lastAttempted = OffsetDateTime.now().minus(strategy.value.lastAttempted.toJavaDuration())
+            val attemptedBefore = OffsetDateTime.now().minus(strategy.value.lastAttempted.toJavaDuration())
 
             val onFailure: suspend (RetryRecord<T>, Throwable) -> Unit = { rec, it ->
                 strategy.value.onFailure("", it)
                 flowRetry.onFailure(rec, it)
             }
 
-            flowRetry.produceNext(strategy.key, lastAttempted, batchSize)
+            flowRetry.produceNext(strategy.key, attemptedBefore, batchSize)
                 .onStart {
-                    log.trace { "${strategy.value.name} --> Retrying records in group:${strategy.key} lastAttempted:$lastAttempted" }
-                }
-                .map {
-                    it.attempt = it.attempt.inc()
-                    it
+                    log.trace { "${strategy.value.name} --> Retrying records in group:${strategy.key} lastAttempted:$attemptedBefore" }
                 }
                 .tryMap(onFailure) {
                     flowRetry.process(it.data, it.attempt)
@@ -68,3 +63,4 @@ fun <T> retryFlow(
         }
     }
 }
+
