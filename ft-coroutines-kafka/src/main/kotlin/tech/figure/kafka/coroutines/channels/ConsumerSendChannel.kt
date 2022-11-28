@@ -42,8 +42,9 @@ fun <K, V> kafkaConsumerChannel(
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
+    acking: Boolean = true
 ): ReceiveChannel<UnAckedConsumerRecords<K, V>> {
-    return KafkaConsumerChannel(consumerProperties, topics, name, pollInterval, consumer, init).also {
+    return KafkaConsumerChannel(consumerProperties, topics, name, pollInterval, consumer, init, acking).also {
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 it.cancel()
@@ -72,6 +73,7 @@ open class KafkaConsumerChannel<K, V>(
     private val pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     private val consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     private val init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
+    private val acking: Boolean = true
 ) : ReceiveChannel<UnAckedConsumerRecords<K, V>> {
     companion object {
         private val threadCounter = AtomicInteger(0)
@@ -128,8 +130,10 @@ open class KafkaConsumerChannel<K, V>(
                             val count = AtomicInteger(polledCount)
                             while (count.getAndDecrement() > 0) {
                                 val it = ackChannel.receive()
-                                log.debug { "ack(${it.duration.toMillis()}ms):${it.asCommitable()}" }
-                                consumer.commitSync(it.asCommitable())
+                                if (acking) {
+                                    log.debug { "ack(${it.duration.toMillis()}ms):${it.asCommitable()}" }
+                                    consumer.commitSync(it.asCommitable())
+                                }
                                 it.commitAck.send(Unit)
                             }
                         }
