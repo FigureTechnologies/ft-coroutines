@@ -106,14 +106,13 @@ fun <K, V> kafkaAckConsumerChannel(
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
 ): ReceiveChannel<UnAckedConsumerRecords<K, V>> {
     return KafkaAckConsumerChannel(
-            consumerProperties,
-            topics,
-            name,
-            pollInterval,
-            consumer,
-            init
-        )
-        .also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
+        consumerProperties,
+        topics,
+        name,
+        pollInterval,
+        consumer,
+        init
+    ).also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
 }
 
 /**
