@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.asFlow
 import tech.figure.coroutines.retry.store.RetryRecord
 import tech.figure.coroutines.retry.store.RetryRecordStore
 
+const val DEFAULT_RETRY_GROUP_SIZE = 40
+const val DEFAULT_RETRY_COLLECTION_NAME = ""
+
 /**
  * Retry a flow of objects using the backing [store].
  *
@@ -16,7 +19,7 @@ import tech.figure.coroutines.retry.store.RetryRecordStore
 fun <T> recordStoreFlowRetry(
     handler: suspend (T) -> Unit,
     store: RetryRecordStore<T>,
-    groupSize: Int = 40,
+    groupSize: Int = DEFAULT_RETRY_GROUP_SIZE,
 ): FlowRetry<T> = RecordStoreFlowRetry(handler, store, groupSize)
 
 /**
@@ -29,7 +32,7 @@ fun <T> recordStoreFlowRetry(
 internal open class RecordStoreFlowRetry<T>(
     private val handler: suspend (T) -> Unit,
     private val store: RetryRecordStore<T>,
-    private val groupSize: Int = 40,
+    private val groupSize: Int = DEFAULT_RETRY_GROUP_SIZE,
 ) : FlowRetry<T> {
     override suspend fun produceNext(
         attemptRange: IntRange,
