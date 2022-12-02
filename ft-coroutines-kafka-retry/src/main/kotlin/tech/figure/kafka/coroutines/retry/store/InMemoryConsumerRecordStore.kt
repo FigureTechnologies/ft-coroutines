@@ -38,6 +38,9 @@ fun <K, V> inMemoryConsumerRecordStore(
         // Find and update the record in the data set.
         data[data.indexOf(record)].also {
             it.data = item
+            it.attempt++
+            it.lastAttempted = OffsetDateTime.now()
+            it.lastException = e?.localizedMessage.orEmpty()
         }
     }
 
