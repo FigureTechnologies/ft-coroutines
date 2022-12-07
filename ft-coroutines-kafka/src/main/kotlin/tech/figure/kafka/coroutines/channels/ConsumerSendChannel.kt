@@ -56,7 +56,6 @@ private fun <K, V> noAckConsumerInit(topics: Set<String>, seekTopicPartitions: C
     val tps = topics.flatMap {
         consumer.partitionsFor(it).map { TopicPartition(it.topic(), it.partition()) }
     }
-    KotlinLogging.logger{}.info { "assigning tps:$tps" }
     consumer.assign(tps)
     consumer.seekTopicPartitions(tps)
 }
