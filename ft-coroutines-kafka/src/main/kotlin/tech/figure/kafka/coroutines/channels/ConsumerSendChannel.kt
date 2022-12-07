@@ -31,10 +31,19 @@ internal fun <K, V> List<ConsumerRecord<K, V>>.toConsumerRecords() =
     groupBy { TopicPartition(it.topic(), it.partition()) }.let(::ConsumerRecords)
 
 private const val DEFAULT_MAX_POLL_RECORDS = 500
-private val Map<String, Any>.maxPollRecordsOrDefault get() =
-    this[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] as? Int // consumerConfig defined max poll records.
-        ?: ConsumerConfig.configDef().defaultValues()[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] as? Int // fallback to kafka default.
-        ?: DEFAULT_MAX_POLL_RECORDS // failsafe.
+private const val DEFAULT_BUFFER_FACTOR = 3
+
+private val Map<String, Any>.maxPollBufferCapacity get(): Int {
+    // consumerConfig defined max poll records.
+    val fromConfig = this[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] as? Int
+    // fallback to kafka default.
+    val fromKafkaDefault = ConsumerConfig.configDef().defaultValues()[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] as? Int
+    // when all else fails...
+    val failsafe = DEFAULT_MAX_POLL_RECORDS
+
+    val maxPollRecords = fromConfig ?: fromKafkaDefault ?: failsafe
+    return maxPollRecords * DEFAULT_BUFFER_FACTOR
+}
 
 /**
  * Default is to create a committable consumer channel for unacknowledged record processing.
@@ -45,7 +54,7 @@ fun <K, V> kafkaConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
     name: String = "kafka-channel",
-    bufferCapacity: Int = consumerProperties.maxPollRecordsOrDefault,
+    bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
@@ -76,7 +85,7 @@ fun <K, V> kafkaNoAckConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
     name: String = "kafka-channel",
-    bufferCapacity: Int = consumerProperties.maxPollRecordsOrDefault,
+    bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit = {},
@@ -116,7 +125,7 @@ fun <K, V> kafkaAckConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
     name: String = "kafka-channel",
-    bufferCapacity: Int = consumerProperties.maxPollRecordsOrDefault,
+    bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
@@ -226,7 +235,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
     consumerProperties: Map<String, Any>,
     topics: Set<String> = emptySet(),
     name: String = "kafka-channel",
-    bufferCapacity: Int = consumerProperties.maxPollRecordsOrDefault,
+    bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     private val pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     private val consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     private val init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
