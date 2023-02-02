@@ -1,10 +1,11 @@
 [versions]
 kafka = "3.2.0"
-kotlinxCore = "1.6.1"
-kotlinxCli = "0.3.4"
+kotlinxCore = "1.6.4"
+kotlinxCli = "0.3.5"
 kotlinxDateTime = "0.3.0"
 kotlinLogging = "2.1.23"
-logback = "1.2.11"
+logback = "1.4.5"
+slf4jApi = "2.0.6"
 
 pluginNexusPublishPlugin = "1.1.0"
 
@@ -17,6 +18,7 @@ kotlinx-coroutines-jdk8 = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-j
 kotlinx-coroutines-reactive = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive", version.ref = "kotlinxCore" }
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApi" }
 
 [plugins]
 publish-nexus = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "pluginNexusPublishPlugin" }
