@@ -4,7 +4,7 @@ plugins {
     `maven-publish`
 }
 
-val artifactName = if (name.startsWith("pb-coroutines")) name else "pb-coroutines-$name"
+val artifactName = if (name.startsWith("ft-coroutines")) name else "ft-coroutines-$name"
 val projectVersion = version.toString()
 
 java {
@@ -24,7 +24,7 @@ configure<PublishingExtension> {
             pom {
                 name.set("Kafka Coroutine Implementation")
                 description.set("Library for reading from and writing to Kafka from Kotlin coroutines")
-                url.set("https://provenance.io")
+                url.set("https://www.figure.tech/")
                 licenses {
                     license {
                         name.set("The Apache License, Version 2.0")
@@ -59,9 +59,9 @@ configure<PublishingExtension> {
                 }
 
                 scm {
-                    developerConnection.set("git@github.com:provenance.io/kafka-coroutines.git")
-                    connection.set("https://github.com/provenance-io/kafka-coroutines.git")
-                    url.set("https://github.com/provenance-io/kafka-coroutines")
+                    developerConnection.set("git@github.com:FigureTechnologies/ft-coroutines.git")
+                    connection.set("https://github.com/FigureTechnologies/ft-coroutines.git")
+                    url.set("https://github.com/FigureTechnologies/ft-coroutines")
                 }
             }
         }
