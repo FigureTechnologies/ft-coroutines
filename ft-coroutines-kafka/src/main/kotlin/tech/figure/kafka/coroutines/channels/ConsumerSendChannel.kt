@@ -224,6 +224,8 @@ internal class KafkaAckConsumerChannel<K, V>(
         do {
             log.trace { "waiting for ${latch.count} more acks" }
             val it = ackChannel.receive()
+            latch.countDown()
+            
             log.trace { "ack received: ${it.offsetAndMetadata}" }
             log.trace {
                 " -> sending to broker ack(${it.duration.toMillis()}ms):${it.asCommitable()}"
