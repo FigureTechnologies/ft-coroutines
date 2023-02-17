@@ -10,7 +10,7 @@ suspend fun <K, V> UnAckedConsumerRecord<K, V>.acking(
     return ack()
 }
 
-fun <K, V> Flow<UnAckedConsumerRecords<K, V>>.acking(
+fun <K, V> Flow<List<UnAckedConsumerRecord<K, V>>>.acking(
     block: suspend (UnAckedConsumerRecord<K, V>) -> Unit = {}
 ): Flow<AckedConsumerRecord<K, V>> {
     return transform { it.forEach { record -> emit(record.acking(block)) } }

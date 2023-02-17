@@ -60,8 +60,4 @@ class UnAckedConsumerRecordImpl<K, V>(
 }
 
 @JvmInline
-value class UnAckedConsumerRecords<K, V>(val records: List<UnAckedConsumerRecord<K, V>>) {
-    suspend fun ackAll() {
-        records.onEach { it.ack() }
-    }
-}
+value class UnAckedConsumerRecords<K, V>(val records: List<UnAckedConsumerRecord<K, V>>)
