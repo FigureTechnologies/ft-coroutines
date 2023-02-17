@@ -60,6 +60,8 @@ class UnAckedConsumerRecordImpl<K, V>(
 }
 
 @JvmInline
-value class UnAckedConsumerRecords<K, V>(val records: List<UnAckedConsumerRecord<K, V>>) : Iterable<UnAckedConsumerRecord<K, V>> {
-    override fun iterator(): Iterator<UnAckedConsumerRecord<K, V>> = records.iterator()
+value class UnAckedConsumerRecords<K, V>(val records: List<UnAckedConsumerRecord<K, V>>) {
+    suspend fun ackAll() {
+        records.onEach { it.ack() }
+    }
 }
