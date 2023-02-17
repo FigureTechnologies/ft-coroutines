@@ -1,10 +1,24 @@
 package tech.figure.kafka.cli
 
 import ch.qos.logback.classic.Level
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import mu.KotlinLogging
+import org.apache.kafka.clients.CommonClientConfigs
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
+import org.apache.kafka.common.serialization.ByteArraySerializer
 import tech.figure.coroutines.retry.flow.retryFlow
-import tech.figure.coroutines.retry.tryOnEachProcess
 import tech.figure.coroutines.tryOnEach
-import tech.figure.kafka.records.acking
 import tech.figure.kafka.coroutines.channels.kafkaConsumerChannel
 import tech.figure.kafka.coroutines.channels.kafkaProducerChannel
 import tech.figure.kafka.coroutines.retry.KAFKA_RETRY_ATTEMPTS_HEADER
@@ -13,28 +27,8 @@ import tech.figure.kafka.coroutines.retry.store.inMemoryConsumerRecordStore
 import tech.figure.kafka.coroutines.retry.toByteArray
 import tech.figure.kafka.coroutines.retry.toInt
 import tech.figure.kafka.coroutines.retry.tryOnEach
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import mu.KotlinLogging
-import org.apache.kafka.clients.CommonClientConfigs
-import org.apache.kafka.clients.admin.AdminClient
-import org.apache.kafka.clients.admin.NewTopic
-import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.serialization.ByteArrayDeserializer
-import org.apache.kafka.common.serialization.ByteArraySerializer
-import kotlin.time.ExperimentalTime
+import tech.figure.kafka.records.acking
 
-@OptIn(ExperimentalTime::class)
 fun main() = runBlocking {
     log {
         "ROOT".level = Level.DEBUG
@@ -77,9 +71,10 @@ fun main() = runBlocking {
     }
 }
 
-private fun someHandler(): suspend (ConsumerRecord<ByteArray, ByteArray>) -> Unit = fn@{
+private fun someHandler(): suspend (List<ConsumerRecord<ByteArray, ByteArray>>) -> Unit = fn@{
     val log = KotlinLogging.logger {}
-    val retryAttempt = it.headers().lastHeader(KAFKA_RETRY_ATTEMPTS_HEADER)?.value()?.toInt()
+    val firstRec = it.firstOrNull() ?: return@fn
+    val retryAttempt = firstRec.headers().lastHeader(KAFKA_RETRY_ATTEMPTS_HEADER)?.value()?.toInt()
 
     // Let it pass on attempt 5
     // val index = it.key().toInt()

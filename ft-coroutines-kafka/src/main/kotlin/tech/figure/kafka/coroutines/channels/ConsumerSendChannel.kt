@@ -148,15 +148,14 @@ fun <K, V> kafkaAckConsumerChannel(
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
 ): ReceiveChannel<List<UnAckedConsumerRecord<K, V>>> {
     return KafkaAckConsumerChannel(
-            consumerProperties,
-            topics,
-            name,
-            bufferCapacity,
-            pollInterval,
-            consumer,
-            init
-        )
-        .also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
+        consumerProperties,
+        topics,
+        name,
+        bufferCapacity,
+        pollInterval,
+        consumer,
+        init
+    ).also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
 }
 
 /**
@@ -225,8 +224,8 @@ internal class KafkaAckConsumerChannel<K, V>(
             log.trace { "waiting for ${latch.count} more acks" }
             val it = ackChannel.receive()
             latch.countDown()
-            
-            log.trace { "ack received: ${it.offsetAndMetadata}" }
+
+            log.trace { "ack received: ${it.topicPartition} => ${it.offsetAndMetadata}" }
             log.trace {
                 " -> sending to broker ack(${it.duration.toMillis()}ms):${it.asCommitable()}"
             }
@@ -293,7 +292,10 @@ abstract class KafkaConsumerChannel<K, V, R>(
     }
 
     protected fun commit(record: CommitConsumerRecord): OffsetAndMetadata {
-        consumer.commitSync(record.asCommitable())
+        val committable = record.asCommitable()
+        log.trace { "trying commit => $committable" }
+        consumer.commitSync(committable)
+        log.trace { "trying commit success! $committable" }
         return record.offsetAndMetadata
     }
 
