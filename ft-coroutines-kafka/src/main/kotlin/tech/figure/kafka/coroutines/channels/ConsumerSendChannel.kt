@@ -197,7 +197,7 @@ internal class KafkaAckConsumerChannel<K, V>(
         log.trace { "preProcessPollSet(tp:$topicPartition count:${records.size})" }
         val ackChannel =
             Channel<CommitConsumerRecord>(capacity = records.size).also {
-                context["ack-channel"] = it
+                context["ack-channel-$topicPartition"] = it
             }
         return records.map {
             val timestamp = System.currentTimeMillis()
@@ -212,7 +212,7 @@ internal class KafkaAckConsumerChannel<K, V>(
         context: Map<String, Any>
     ) {
         log.trace { "postProcessPollSet(tp:$topicPartition count:${records.size})" }
-        val ackChannel = context["ack-channel"]!! as ReceiveChannel<CommitConsumerRecord>
+        val ackChannel = context["ack-channel-$topicPartition"]!! as ReceiveChannel<CommitConsumerRecord>
         if (records.isEmpty()) {
             log.trace { "empty record set, not waiting for acks" }
             return
