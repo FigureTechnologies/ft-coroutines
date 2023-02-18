@@ -1,5 +1,6 @@
 package tech.figure.kafka.coroutines.channels
 
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.time.Duration
@@ -24,26 +25,26 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.common.TopicPartition
 import tech.figure.kafka.loggingConsumerRebalanceListener
 import tech.figure.kafka.records.CommitConsumerRecord
+import tech.figure.kafka.records.UnAckedConsumerRecord
 import tech.figure.kafka.records.UnAckedConsumerRecordImpl
-import tech.figure.kafka.records.UnAckedConsumerRecords
-
-internal fun <K, V> List<ConsumerRecord<K, V>>.toConsumerRecords() =
-    groupBy { TopicPartition(it.topic(), it.partition()) }.let(::ConsumerRecords)
 
 private const val DEFAULT_MAX_POLL_RECORDS = 500
 private const val DEFAULT_BUFFER_FACTOR = 3
 
-private val Map<String, Any>.maxPollBufferCapacity get(): Int {
-    // consumerConfig defined max poll records.
-    val fromConfig = this[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] as? Int
-    // fallback to kafka default.
-    val fromKafkaDefault = ConsumerConfig.configDef().defaultValues()[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] as? Int
-    // when all else fails...
-    val failsafe = DEFAULT_MAX_POLL_RECORDS
+private val Map<String, Any>.maxPollBufferCapacity
+    get(): Int {
+        // consumerConfig defined max poll records.
+        val fromConfig = this[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] as? Int
+        // fallback to kafka default.
+        val fromKafkaDefault =
+            ConsumerConfig.configDef().defaultValues()[ConsumerConfig.MAX_POLL_RECORDS_CONFIG]
+                as? Int
+        // when all else fails...
+        val failsafe = DEFAULT_MAX_POLL_RECORDS
 
-    val maxPollRecords = fromConfig ?: fromKafkaDefault ?: failsafe
-    return maxPollRecords * DEFAULT_BUFFER_FACTOR
-}
+        val maxPollRecords = fromConfig ?: fromKafkaDefault ?: failsafe
+        return maxPollRecords * DEFAULT_BUFFER_FACTOR
+    }
 
 /**
  * Default is to create a committable consumer channel for unacknowledged record processing.
@@ -59,12 +60,26 @@ fun <K, V> kafkaConsumerChannel(
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
-): ReceiveChannel<UnAckedConsumerRecords<K, V>> = kafkaAckConsumerChannel(consumerProperties, topics, name, bufferCapacity, pollInterval, consumer, rebalanceListener, init)
+): ReceiveChannel<List<UnAckedConsumerRecord<K, V>>> =
+    kafkaAckConsumerChannel(
+        consumerProperties,
+        topics,
+        name,
+        bufferCapacity,
+        pollInterval,
+        consumer,
+        rebalanceListener,
+        init
+    )
 
-private fun <K, V> noAckConsumerInit(topics: Set<String>, seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit): (Consumer<K, V>) -> Unit = { consumer ->
-    val tps = topics.flatMap {
-        consumer.partitionsFor(it).map { TopicPartition(it.topic(), it.partition()) }
-    }
+private fun <K, V> noAckConsumerInit(
+    topics: Set<String>,
+    seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit
+): (Consumer<K, V>) -> Unit = { consumer ->
+    val tps =
+        topics.flatMap {
+            consumer.partitionsFor(it).map { TopicPartition(it.topic(), it.partition()) }
+        }
     consumer.assign(tps)
     consumer.seekTopicPartitions(tps)
 }
@@ -79,7 +94,7 @@ private fun <K, V> noAckConsumerInit(topics: Set<String>, seekTopicPartitions: C
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
  * @param init Callback for initializing the [Consumer].
  * @return A non-running [KafkaConsumerChannel] instance that must be started via
- * [KafkaConsumerChannel.start].
+ *   [KafkaConsumerChannel.start].
  */
 fun <K, V> kafkaNoAckConsumerChannel(
     consumerProperties: Map<String, Any>,
@@ -89,9 +104,9 @@ fun <K, V> kafkaNoAckConsumerChannel(
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit = {},
-): ReceiveChannel<ConsumerRecords<K, V>> {
+): ReceiveChannel<List<ConsumerRecord<K, V>>> {
     return object :
-        KafkaConsumerChannel<K, V, ConsumerRecords<K, V>>(
+        KafkaConsumerChannel<K, V, ConsumerRecord<K, V>>(
             consumerProperties,
             topics,
             name,
@@ -101,10 +116,11 @@ fun <K, V> kafkaNoAckConsumerChannel(
             noAckConsumerInit(topics, seekTopicPartitions),
         ) {
         override suspend fun preProcessPollSet(
-            records: ConsumerRecords<K, V>,
+            topicPartition: TopicPartition,
+            records: List<ConsumerRecord<K, V>>,
             context: MutableMap<String, Any>
-        ): List<ConsumerRecords<K, V>> {
-            return listOf(records)
+        ): List<ConsumerRecord<K, V>> {
+            return records
         }
     }
 }
@@ -119,7 +135,7 @@ fun <K, V> kafkaNoAckConsumerChannel(
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
  * @param init Callback for initializing the [Consumer].
  * @return A non-running [KafkaConsumerChannel] instance that must be started via
- * [KafkaConsumerChannel.start].
+ *   [KafkaConsumerChannel.start].
  */
 fun <K, V> kafkaAckConsumerChannel(
     consumerProperties: Map<String, Any>,
@@ -130,7 +146,7 @@ fun <K, V> kafkaAckConsumerChannel(
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
-): ReceiveChannel<UnAckedConsumerRecords<K, V>> {
+): ReceiveChannel<List<UnAckedConsumerRecord<K, V>>> {
     return KafkaAckConsumerChannel(
         consumerProperties,
         topics,
@@ -164,7 +180,7 @@ internal class KafkaAckConsumerChannel<K, V>(
     consumer: Consumer<K, V>,
     init: Consumer<K, V>.() -> Unit
 ) :
-    KafkaConsumerChannel<K, V, UnAckedConsumerRecords<K, V>>(
+    KafkaConsumerChannel<K, V, UnAckedConsumerRecord<K, V>>(
         consumerProperties,
         topics,
         name,
@@ -174,47 +190,50 @@ internal class KafkaAckConsumerChannel<K, V>(
         init
     ) {
     override suspend fun preProcessPollSet(
-        records: ConsumerRecords<K, V>,
+        topicPartition: TopicPartition,
+        records: List<ConsumerRecord<K, V>>,
         context: MutableMap<String, Any>,
-    ): List<UnAckedConsumerRecords<K, V>> {
-        log.trace { "preProcessPollSet(${records.count()})" }
+    ): List<UnAckedConsumerRecord<K, V>> {
+        log.trace { "preProcessPollSet(tp:$topicPartition count:${records.size})" }
         val ackChannel =
-            Channel<CommitConsumerRecord>(capacity = records.count()).also {
+            Channel<CommitConsumerRecord>(capacity = records.size).also {
                 context["ack-channel"] = it
             }
-        val unackedRecords =
-            records
-                .groupBy { "${it.topic()}-${it.partition()}" }
-                .map {
-                    val timestamp = System.currentTimeMillis()
-                    val records =
-                        it.value.map { UnAckedConsumerRecordImpl(it, ackChannel, timestamp) }
-                    UnAckedConsumerRecords(records)
-                }
-        return unackedRecords
+        return records.map {
+            val timestamp = System.currentTimeMillis()
+            UnAckedConsumerRecordImpl(it, ackChannel, timestamp)
+        }
     }
 
     @Suppress("unchecked_cast")
     override suspend fun postProcessPollSet(
-        records: List<UnAckedConsumerRecords<K, V>>,
+        topicPartition: TopicPartition,
+        records: List<UnAckedConsumerRecord<K, V>>,
         context: Map<String, Any>
     ) {
-        log.trace { "postProcessPollSet(records:${records.sumOf { it.count() } })" }
-        val ackChannel = context["ack-channel"]!! as Channel<CommitConsumerRecord>
-        for (rs in records) {
-            if (rs.records.isNotEmpty()) {
-                val count = AtomicInteger(rs.records.size)
-                while (count.getAndDecrement() > 0) {
-                    log.trace { "waiting for ${count.get()} commits" }
-                    val it = ackChannel.receive()
-                    log.trace { "sending to broker ack(${it.duration.toMillis()}ms):${it.asCommitable()}" }
-                    commit(it)
-                    log.trace { "acking the commit back to flow" }
-                    it.commitAck.send(Unit)
-                }
-            }
+        log.trace { "postProcessPollSet(tp:$topicPartition count:${records.size})" }
+        val ackChannel = context["ack-channel"]!! as ReceiveChannel<CommitConsumerRecord>
+        if (records.isEmpty()) {
+            log.trace { "empty record set, not waiting for acks" }
+            return
         }
-        ackChannel.close()
+
+        val latch = CountDownLatch(records.size)
+        log.trace { "poll group needs ${latch.count} total acks" }
+        do {
+            log.trace { "waiting for ${latch.count} more acks" }
+            val it = ackChannel.receive()
+            latch.countDown()
+
+            log.trace { "ack received: ${it.topicPartition} => ${it.offsetAndMetadata}" }
+            log.trace {
+                " -> sending to broker ack(${it.duration.toMillis()}ms):${it.asCommitable()}"
+            }
+            commit(it)
+
+            log.trace { "acking the commit back to flow" }
+            it.commitAck.send(Unit)
+        } while (latch.count > 0)
     }
 }
 
@@ -239,7 +258,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
     private val pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     private val consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     private val init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
-) : ReceiveChannel<R> {
+) : ReceiveChannel<List<R>> {
     companion object {
         private val threadCounter = AtomicInteger(0)
     }
@@ -252,21 +271,31 @@ abstract class KafkaConsumerChannel<K, V, R>(
             isDaemon = true,
             start = false
         )
-    private val sendChannel = Channel<R>(capacity = bufferCapacity)
+    private val sendChannel = Channel<List<R>>(capacity = bufferCapacity)
     private fun <K, V> Consumer<K, V>.poll(duration: Duration) = poll(duration.toJavaDuration())
 
     private fun <T, L : Iterable<T>> L.ifEmpty(block: () -> L): L =
         if (count() == 0) block() else this
 
     protected abstract suspend fun preProcessPollSet(
-        records: ConsumerRecords<K, V>,
+        topicPartition: TopicPartition,
+        records: List<ConsumerRecord<K, V>>,
         context: MutableMap<String, Any>
     ): List<R>
 
-    protected open suspend fun postProcessPollSet(records: List<R>, context: Map<String, Any>) {}
+    protected open suspend fun postProcessPollSet(
+        topicPartition: TopicPartition,
+        records: List<R>,
+        context: Map<String, Any>
+    ) {
+        /* no-op */
+    }
 
     protected fun commit(record: CommitConsumerRecord): OffsetAndMetadata {
-        consumer.commitSync(record.asCommitable())
+        val committable = record.asCommitable()
+        log.trace { "trying commit => $committable" }
+        consumer.commitSync(committable)
+        log.trace { "trying commit success! $committable" }
         return record.offsetAndMetadata
     }
 
@@ -289,22 +318,20 @@ abstract class KafkaConsumerChannel<K, V, R>(
 
                     log.trace("poll(topics:${consumer.subscription()}) got $polledCount records.")
 
-                    // Group by topic-partition to guarantee ordering.
-                    val records =
-                        polled
-                            .groupBy { "${it.topic()}-${it.partition()}" }
-                            .values
-                            .map { it.toConsumerRecords() }
-
                     // Convert to internal types.
                     val context = mutableMapOf<String, Any>()
-                    val processSet = records.map { preProcessPollSet(it, context) }
+                    val polledPartitions = polled.partitions()
+                    val preSet = polledPartitions.map { it to polled.records(it) }
+                    val inflightSet =
+                        preSet.map { (tp, records) ->
+                            tp to preProcessPollSet(tp, records, context)
+                        }
 
-                    // Send down the pipeline for processing
-                    processSet
-                        .onEach { it.map { sendChannel.send(it) } }
-                        // Clean up any processing.
-                        .map { postProcessPollSet(it, context) }
+                    // Post-processing set.
+                    inflightSet.onEach { (tp, records) ->
+                        sendChannel.send(records)
+                        tp to postProcessPollSet(tp, records, context)
+                    }
                 }
             } finally {
                 log.info("${coroutineContext.job} shutting down consumer thread")
@@ -336,13 +363,13 @@ abstract class KafkaConsumerChannel<K, V, R>(
     override val isClosedForReceive: Boolean = sendChannel.isClosedForReceive
 
     @ExperimentalCoroutinesApi override val isEmpty: Boolean = sendChannel.isEmpty
-    override val onReceive: SelectClause1<R>
+    override val onReceive: SelectClause1<List<R>>
         get() {
             start()
             return sendChannel.onReceive
         }
 
-    override val onReceiveCatching: SelectClause1<ChannelResult<R>>
+    override val onReceiveCatching: SelectClause1<ChannelResult<List<R>>>
         get() {
             start()
             return sendChannel.onReceiveCatching
@@ -362,22 +389,22 @@ abstract class KafkaConsumerChannel<K, V, R>(
         sendChannel.cancel(cause)
     }
 
-    override fun iterator(): ChannelIterator<R> {
+    override fun iterator(): ChannelIterator<List<R>> {
         start()
         return sendChannel.iterator()
     }
 
-    override suspend fun receive(): R {
+    override suspend fun receive(): List<R> {
         start()
         return sendChannel.receive()
     }
 
-    override suspend fun receiveCatching(): ChannelResult<R> {
+    override suspend fun receiveCatching(): ChannelResult<List<R>> {
         start()
         return sendChannel.receiveCatching()
     }
 
-    override fun tryReceive(): ChannelResult<R> {
+    override fun tryReceive(): ChannelResult<List<R>> {
         start()
         return sendChannel.tryReceive()
     }

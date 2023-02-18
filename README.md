@@ -31,12 +31,17 @@ A collection of kotlin coroutines flow based projects to create channels and flo
     </dependency>
     <dependency>
         <groupId>tech.figure.coroutines</groupId>
+        <artifactId>ft-coroutines-retry</artifactId>
+        <version>${version}</version>
+    </dependency>
+    <dependency>
+        <groupId>tech.figure.coroutines</groupId>
         <artifactId>ft-coroutines-kafka</artifactId>
         <version>${version}</version>
     </dependency>
     <dependency>
         <groupId>tech.figure.coroutines</groupId>
-        <artifactId>ft-coroutines-retry</artifactId>
+        <artifactId>ft-coroutines-kafka-retry</artifactId>
         <version>${version}</version>
     </dependency>
 </dependencies>
@@ -50,8 +55,10 @@ In `build.gradle`:
 
 ```groovy
 implementation 'tech.figure.coroutines:ft-coroutines-core:${version}'
-implementation 'tech.figure.coroutines:ft-coroutines-kafka:${version}'
 implementation 'tech.figure.coroutines:ft-coroutines-retry:${version}'
+
+implementation 'tech.figure.coroutines:ft-coroutines-kafka:${version}'
+implementation 'tech.figure.coroutines:ft-coroutines-kafka-retry:${version}'
 ```
 
 #### Kotlin
@@ -60,9 +67,18 @@ In `build.gradle.kts`:
 
 ```kotlin
 implementation("tech.figure.coroutines", "ft-coroutines-core", version)
-implementation("tech.figure.coroutines", "ft-coroutines-kafka", version)
 implementation("tech.figure.coroutines", "ft-coroutines-retry", version)
+
+implementation("tech.figure.coroutines", "ft-coroutines-kafka", version)
+implementation("tech.figure.coroutines", "ft-coroutines-kafka-retry", version)
 ```
 
-## Usage
+## Libraries
 
+[Coroutines-Core](ft-coroutines-core) Contains common coroutines helper functions, such as `tryMap`, `tryOnEach` and `chunked`.
+
+[Coroutines-Retry](ft-coroutines-retry) Contains core retry logic.
+
+[Coroutines-Kafka](ft-coroutines-kafka) Contains kafka methods and helpers.
+
+[Coroutines-Kafka-Retry](ft-coroutines-kafka-retry) Contains retry logic for kafka.
