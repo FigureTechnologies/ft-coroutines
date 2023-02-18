@@ -59,5 +59,4 @@ class UnAckedConsumerRecordImpl<K, V>(
         """.trimIndent().split('\n').joinToString { it.trim() }
 }
 
-@JvmInline
-value class UnAckedConsumerRecords<K, V>(val records: List<UnAckedConsumerRecord<K, V>>)
+typealias UnAckedConsumerRecords<K, V> = List<UnAckedConsumerRecord<K, V>>
