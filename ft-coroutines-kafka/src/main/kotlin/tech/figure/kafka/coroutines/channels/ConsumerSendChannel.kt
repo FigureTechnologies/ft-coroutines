@@ -303,12 +303,12 @@ abstract class KafkaConsumerChannel<K, V, R>(
     fun run() {
         consumer.init()
 
-        log.info("starting thread for ${consumer.subscription()}")
+        log.info { "starting thread for ${consumer.subscription()}" }
         runBlocking {
-            log.info("${coroutineContext.job} running consumer ${consumer.subscription()}")
+            log.info { "${coroutineContext.job} running consumer ${consumer.subscription()}" }
             try {
                 while (!sendChannel.isClosedForSend) {
-                    log.trace("poll(topics:${consumer.subscription()}) ...")
+                    log.trace { "poll(topics:${consumer.subscription()}) ..." }
                     val polled =
                         consumer.poll(Duration.ZERO).ifEmpty { consumer.poll(pollInterval) }
                     val polledCount = polled.count()
@@ -316,7 +316,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
                         continue
                     }
 
-                    log.trace("poll(topics:${consumer.subscription()}) got $polledCount records.")
+                    log.trace { "poll(topics:${consumer.subscription()}) got $polledCount records." }
 
                     // Convert to internal types.
                     val context = mutableMapOf<String, Any>()
@@ -334,7 +334,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
                     }
                 }
             } finally {
-                log.info("${coroutineContext.job} shutting down consumer thread")
+                log.info { "${coroutineContext.job} shutting down consumer thread" }
                 try {
                     sendChannel.cancel(CancellationException("consumer shut down"))
                     consumer.unsubscribe()
@@ -352,7 +352,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
         if (!thread.isAlive) {
             synchronized(thread) {
                 if (!thread.isAlive) {
-                    log.info("starting consumer thread")
+                    log.info { "starting consumer thread" }
                     thread.start()
                 }
             }
