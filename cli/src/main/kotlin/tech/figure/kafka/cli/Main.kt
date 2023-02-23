@@ -54,11 +54,10 @@ fun main(args: Array<String>) {
         "tech.figure.kafka.coroutines.channels.KafkaConsumerChannel".level = Level.INFO
     }
 
-    val log = logger("main")
-    val incoming = kafkaConsumerChannel<String, String>(commonProps, setOf(source))
-    val producer = kafkaProducerChannel<String, String>(commonProps)
-
     runBlocking {
+        val log = logger("main")
+        val incoming = kafkaConsumerChannel<String, String>(commonProps, setOf(source))
+        val producer = kafkaProducerChannel<String, String>(commonProps)
 
         //
         // Using select

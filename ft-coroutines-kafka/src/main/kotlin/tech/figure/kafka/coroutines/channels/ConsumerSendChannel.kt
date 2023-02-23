@@ -1,17 +1,17 @@
 package tech.figure.kafka.coroutines.channels
 
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.selects.SelectClause1
 import mu.KotlinLogging
@@ -49,30 +49,29 @@ private val Map<String, Any>.maxPollBufferCapacity
 /**
  * Default is to create a committable consumer channel for unacknowledged record processing.
  *
- * @see [kafkaAckConsumerChannel]
+ * @see [KafkaAckCoroutineConsumer]
  */
-fun <K, V> kafkaConsumerChannel(
+@OptIn(ExperimentalCoroutinesApi::class)
+fun <K, V> CoroutineScope.kafkaConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
-    name: String = "kafka-channel",
     bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
 ): ReceiveChannel<List<UnAckedConsumerRecord<K, V>>> =
-    kafkaAckConsumerChannel(
+    kafkaAckConsumer(
         consumerProperties,
         topics,
-        name,
         bufferCapacity,
         pollInterval,
         consumer,
         rebalanceListener,
         init
-    )
+    ).produceIn(this)
 
-private fun <K, V> noAckConsumerInit(
+internal fun <K, V> noAckConsumerInit(
     topics: Set<String>,
     seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit
 ): (Consumer<K, V>) -> Unit = { consumer ->
@@ -84,32 +83,47 @@ private fun <K, V> noAckConsumerInit(
     consumer.seekTopicPartitions(tps)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
+fun <K, V> CoroutineScope.kafkaNoAckConsumerChannel(
+    consumerProperties: Map<String, Any>,
+    topics: Set<String>,
+    bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
+    pollInterval: Duration = DEFAULT_POLL_INTERVAL,
+    consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
+    seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit = {},
+): ReceiveChannel<List<ConsumerRecord<K, V>>> =
+    kafkaNoAckConsumer(
+        consumerProperties,
+        topics,
+        bufferCapacity,
+        pollInterval,
+        consumer,
+        seekTopicPartitions,
+    ).produceIn(this)
+
 /**
  * Create a [ReceiveChannel] for [ConsumerRecords] from kafka.
  *
  * @param consumerProperties Kafka consumer settings for this channel.
  * @param topics Topics to subscribe to. Can be overridden via custom `init` parameter.
- * @param name The thread pool's base name for this consumer.
  * @param pollInterval Interval for kafka consumer [Consumer.poll] method calls.
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
- * @param init Callback for initializing the [Consumer].
- * @return A non-running [KafkaConsumerChannel] instance that must be started via
- *   [KafkaConsumerChannel.start].
+ * @param seekTopicPartitions Callback used to seek to different spots in the topic.
+ * @return A non-running [KafkaCoroutineConsumer] instance that must be started via
+ *   [KafkaCoroutineConsumer.run].
  */
-fun <K, V> kafkaNoAckConsumerChannel(
+internal fun <K, V> kafkaNoAckConsumer(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
-    name: String = "kafka-channel",
     bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit = {},
-): ReceiveChannel<List<ConsumerRecord<K, V>>> {
-    return object :
-        KafkaConsumerChannel<K, V, ConsumerRecord<K, V>>(
+) =
+    object :
+        KafkaCoroutineConsumer<K, V, ConsumerRecord<K, V>>(
             consumerProperties,
             topics,
-            name,
             bufferCapacity,
             pollInterval,
             consumer,
@@ -123,7 +137,6 @@ fun <K, V> kafkaNoAckConsumerChannel(
             return records
         }
     }
-}
 
 /**
  * Create a [ReceiveChannel] for unacknowledged consumer records from kafka.
@@ -134,29 +147,26 @@ fun <K, V> kafkaNoAckConsumerChannel(
  * @param pollInterval Interval for kafka consumer [Consumer.poll] method calls.
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
  * @param init Callback for initializing the [Consumer].
- * @return A non-running [KafkaConsumerChannel] instance that must be started via
- *   [KafkaConsumerChannel.start].
+ * @return A non-running [KafkaCoroutineConsumer] instance that must be started via
+ *   [KafkaCoroutineConsumer.run].
  */
-fun <K, V> kafkaAckConsumerChannel(
+internal fun <K, V> kafkaAckConsumer(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
-    name: String = "kafka-channel",
     bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
-): ReceiveChannel<List<UnAckedConsumerRecord<K, V>>> {
-    return KafkaAckConsumerChannel(
+) =
+    KafkaAckCoroutineConsumer(
         consumerProperties,
         topics,
-        name,
         bufferCapacity,
         pollInterval,
         consumer,
-        init
-    ).also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
-}
+        init,
+    ).also { Runtime.getRuntime().addShutdownHook(Thread { it.stop() }) }
 
 /**
  * Acking kafka [Consumer] object implementing the [ReceiveChannel] methods.
@@ -171,19 +181,17 @@ fun <K, V> kafkaAckConsumerChannel(
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
  * @param init Callback for initializing the [Consumer].
  */
-internal class KafkaAckConsumerChannel<K, V>(
+open class KafkaAckCoroutineConsumer<K, V>(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
-    name: String,
     bufferCapacity: Int,
     pollInterval: Duration,
     consumer: Consumer<K, V>,
     init: Consumer<K, V>.() -> Unit
 ) :
-    KafkaConsumerChannel<K, V, UnAckedConsumerRecord<K, V>>(
+    KafkaCoroutineConsumer<K, V, UnAckedConsumerRecord<K, V>>(
         consumerProperties,
         topics,
-        name,
         bufferCapacity,
         pollInterval,
         consumer,
@@ -212,7 +220,8 @@ internal class KafkaAckConsumerChannel<K, V>(
         context: Map<String, Any>
     ) {
         log.trace { "postProcessPollSet(tp:$topicPartition count:${records.size})" }
-        val ackChannel = context["ack-channel-$topicPartition"]!! as ReceiveChannel<CommitConsumerRecord>
+        val ackChannel =
+            context["ack-channel-$topicPartition"]!! as ReceiveChannel<CommitConsumerRecord>
         if (records.isEmpty()) {
             log.trace { "empty record set, not waiting for acks" }
             return
@@ -250,28 +259,17 @@ internal class KafkaAckConsumerChannel<K, V>(
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
  * @param init Callback for initializing the [Consumer].
  */
-abstract class KafkaConsumerChannel<K, V, R>(
+abstract class KafkaCoroutineConsumer<K, V, R>(
     consumerProperties: Map<String, Any>,
     topics: Set<String> = emptySet(),
-    name: String = "kafka-channel",
     bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     private val pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     private val consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     private val init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
-) : ReceiveChannel<List<R>> {
-    companion object {
-        private val threadCounter = AtomicInteger(0)
-    }
+) {
+    val sendChannel = Channel<List<R>>(capacity = bufferCapacity)
 
     protected val log = KotlinLogging.logger {}
-    private val thread =
-        thread(
-            name = "$name-${threadCounter.getAndIncrement()}",
-            block = { run() },
-            isDaemon = true,
-            start = false
-        )
-    private val sendChannel = Channel<List<R>>(capacity = bufferCapacity)
     private fun <K, V> Consumer<K, V>.poll(duration: Duration) = poll(duration.toJavaDuration())
 
     private fun <T, L : Iterable<T>> L.ifEmpty(block: () -> L): L =
@@ -316,7 +314,9 @@ abstract class KafkaConsumerChannel<K, V, R>(
                         continue
                     }
 
-                    log.trace { "poll(topics:${consumer.subscription()}) got $polledCount records." }
+                    log.trace {
+                        "poll(topics:${consumer.subscription()}) got $polledCount records."
+                    }
 
                     // Convert to internal types.
                     val context = mutableMapOf<String, Any>()
@@ -348,64 +348,66 @@ abstract class KafkaConsumerChannel<K, V, R>(
         }
     }
 
-    fun start() {
-        if (!thread.isAlive) {
-            synchronized(thread) {
-                if (!thread.isAlive) {
-                    log.info { "starting consumer thread" }
-                    thread.start()
-                }
-            }
-        }
-    }
-
-    @ExperimentalCoroutinesApi
-    override val isClosedForReceive: Boolean = sendChannel.isClosedForReceive
-
-    @ExperimentalCoroutinesApi override val isEmpty: Boolean = sendChannel.isEmpty
-    override val onReceive: SelectClause1<List<R>>
-        get() {
-            start()
-            return sendChannel.onReceive
-        }
-
-    override val onReceiveCatching: SelectClause1<ChannelResult<List<R>>>
-        get() {
-            start()
-            return sendChannel.onReceiveCatching
-        }
-
-    @Deprecated(
-        "Since 1.2.0, binary compatibility with versions <= 1.1.x",
-        level = DeprecationLevel.HIDDEN
-    )
-    override fun cancel(cause: Throwable?): Boolean {
-        cancel(CancellationException("cancel", cause))
-        return true
-    }
-
-    override fun cancel(cause: CancellationException?) {
-        consumer.wakeup()
-        sendChannel.cancel(cause)
-    }
-
-    override fun iterator(): ChannelIterator<List<R>> {
-        start()
-        return sendChannel.iterator()
-    }
-
-    override suspend fun receive(): List<R> {
-        start()
-        return sendChannel.receive()
-    }
-
-    override suspend fun receiveCatching(): ChannelResult<List<R>> {
-        start()
-        return sendChannel.receiveCatching()
-    }
-
-    override fun tryReceive(): ChannelResult<List<R>> {
-        start()
-        return sendChannel.tryReceive()
-    }
+    fun stop() = consumer.wakeup()
 }
+
+@ExperimentalCoroutinesApi
+fun <K, V, R> KafkaCoroutineConsumer<K, V, R>.produceIn(
+    coroutineScope: CoroutineScope,
+): ReceiveChannel<List<R>> =
+    object : ReceiveChannel<List<R>> {
+
+        fun start() {
+            coroutineScope.launch { run() }
+        }
+
+        override val isClosedForReceive: Boolean = sendChannel.isClosedForReceive
+
+        override val isEmpty: Boolean = sendChannel.isEmpty
+
+        override val onReceive: SelectClause1<List<R>>
+            get() {
+                start()
+                return sendChannel.onReceive
+            }
+
+        override val onReceiveCatching: SelectClause1<ChannelResult<List<R>>>
+            get() {
+                start()
+                return sendChannel.onReceiveCatching
+            }
+
+        @Deprecated(
+            "Since 1.2.0, binary compatibility with versions <= 1.1.x",
+            level = DeprecationLevel.HIDDEN
+        )
+        override fun cancel(cause: Throwable?): Boolean {
+            cancel(CancellationException("cancel", cause))
+            return true
+        }
+
+        override fun cancel(cause: CancellationException?) {
+            stop()
+            sendChannel.cancel(cause)
+        }
+
+        override fun iterator(): ChannelIterator<List<R>> {
+            start()
+            return sendChannel.iterator()
+        }
+
+        override suspend fun receive(): List<R> {
+            start()
+            return sendChannel.receive()
+        }
+
+        override suspend fun receiveCatching(): ChannelResult<List<R>> {
+            start()
+            return sendChannel.receiveCatching()
+        }
+
+        override fun tryReceive(): ChannelResult<List<R>> {
+            start()
+            return sendChannel.tryReceive()
+        }
+    }
