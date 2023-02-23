@@ -1,19 +1,23 @@
 package tech.figure.kafka.coroutines.channels
 
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.selects.SelectClause1
+import kotlinx.coroutines.selects.select
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -51,10 +55,9 @@ private val Map<String, Any>.maxPollBufferCapacity
  *
  * @see [kafkaAckConsumerChannel]
  */
-fun <K, V> kafkaConsumerChannel(
+fun <K, V> CoroutineScope.kafkaConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
-    name: String = "kafka-channel",
     bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
@@ -64,11 +67,11 @@ fun <K, V> kafkaConsumerChannel(
     kafkaAckConsumerChannel(
         consumerProperties,
         topics,
-        name,
         bufferCapacity,
         pollInterval,
         consumer,
         rebalanceListener,
+        this,
         init
     )
 
@@ -94,9 +97,9 @@ private fun <K, V> noAckConsumerInit(
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
  * @param init Callback for initializing the [Consumer].
  * @return A non-running [KafkaConsumerChannel] instance that must be started via
- *   [KafkaConsumerChannel.start].
+ *   [KafkaConsumerChannel.startIn].
  */
-fun <K, V> kafkaNoAckConsumerChannel(
+fun <K, V> CoroutineScope.launchKafkaNoAckConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
     name: String = "kafka-channel",
@@ -109,10 +112,10 @@ fun <K, V> kafkaNoAckConsumerChannel(
         KafkaConsumerChannel<K, V, ConsumerRecord<K, V>>(
             consumerProperties,
             topics,
-            name,
             bufferCapacity,
             pollInterval,
             consumer,
+            this,
             noAckConsumerInit(topics, seekTopicPartitions),
         ) {
         override suspend fun preProcessPollSet(
@@ -135,27 +138,28 @@ fun <K, V> kafkaNoAckConsumerChannel(
  * @param consumer The instantiated [Consumer] to use to receive from kafka.
  * @param init Callback for initializing the [Consumer].
  * @return A non-running [KafkaConsumerChannel] instance that must be started via
- *   [KafkaConsumerChannel.start].
+ *   [KafkaConsumerChannel.startIn].
  */
 fun <K, V> kafkaAckConsumerChannel(
     consumerProperties: Map<String, Any>,
     topics: Set<String>,
-    name: String = "kafka-channel",
     bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
     rebalanceListener: ConsumerRebalanceListener = loggingConsumerRebalanceListener(),
+    scope: CoroutineScope,
     init: Consumer<K, V>.() -> Unit = { subscribe(topics, rebalanceListener) },
 ): ReceiveChannel<List<UnAckedConsumerRecord<K, V>>> {
     return KafkaAckConsumerChannel(
-        consumerProperties,
-        topics,
-        name,
-        bufferCapacity,
-        pollInterval,
-        consumer,
-        init
-    ).also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
+            consumerProperties,
+            topics,
+            bufferCapacity,
+            pollInterval,
+            consumer,
+            scope,
+            init
+        )
+        .also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
 }
 
 /**
@@ -172,21 +176,21 @@ fun <K, V> kafkaAckConsumerChannel(
  * @param init Callback for initializing the [Consumer].
  */
 internal class KafkaAckConsumerChannel<K, V>(
-    consumerProperties: Map<String, Any>,
+    private val consumerProperties: Map<String, Any>,
     topics: Set<String>,
-    name: String,
     bufferCapacity: Int,
     pollInterval: Duration,
     consumer: Consumer<K, V>,
+    scope: CoroutineScope,
     init: Consumer<K, V>.() -> Unit
 ) :
     KafkaConsumerChannel<K, V, UnAckedConsumerRecord<K, V>>(
         consumerProperties,
         topics,
-        name,
         bufferCapacity,
         pollInterval,
         consumer,
+        scope,
         init
     ) {
     override suspend fun preProcessPollSet(
@@ -205,35 +209,60 @@ internal class KafkaAckConsumerChannel<K, V>(
         }
     }
 
+    @OptIn(ObsoleteCoroutinesApi::class)
     @Suppress("unchecked_cast")
     override suspend fun postProcessPollSet(
         topicPartition: TopicPartition,
         records: List<UnAckedConsumerRecord<K, V>>,
         context: Map<String, Any>
     ) {
-        log.trace { "postProcessPollSet(tp:$topicPartition count:${records.size})" }
-        val ackChannel = context["ack-channel-$topicPartition"]!! as ReceiveChannel<CommitConsumerRecord>
+        log.debug { "postProcessPollSet(tp:$topicPartition count:${records.size})" }
+        val ackChannel =
+            context["ack-channel-$topicPartition"]!! as ReceiveChannel<CommitConsumerRecord>
         if (records.isEmpty()) {
             log.trace { "empty record set, not waiting for acks" }
             return
         }
 
-        val latch = CountDownLatch(records.size)
-        log.trace { "poll group needs ${latch.count} total acks" }
+        val count = records.size
+        val latch = AtomicInteger(count)
+        log.trace { "poll group needs $count total acks" }
         do {
-            log.trace { "waiting for ${latch.count} more acks" }
-            val it = ackChannel.receive()
-            latch.countDown()
+            latch
+                .get()
+                .takeIf { it >= 5 && it % (count / 5) == 0 }
+                .let { log.debug { "Waiting for ${latch.get()} more records in poll group." } }
 
-            log.trace { "ack received: ${it.topicPartition} => ${it.offsetAndMetadata}" }
-            log.trace {
-                " -> sending to broker ack(${it.duration.toMillis()}ms):${it.asCommitable()}"
+            val timer = ticker(1.minutes.inWholeMilliseconds)
+            select<Unit> {
+                timer.onReceive {
+                    log.error { "everything's failing!" }
+                    throw CancellationException("failed to receive ack from async processor")
+                }
+
+                ackChannel.onReceive { ack ->
+                    latch.getAndDecrement()
+
+                    log.trace { "ack received: ${ack.topicPartition} => ${ack.offsetAndMetadata}" }
+                    log.trace {
+                        " -> sending to broker ack(${ack.duration.toMillis()}ms):${ack.asCommitable()}"
+                    }
+                    runCatching { commit(ack) }
+                        .onFailure {
+                            ackChannel.cancel(
+                                CancellationException(
+                                    "failed to commit to kafka ${ack.topicPartition}-${ack.offsetAndMetadata}",
+                                    it
+                                )
+                            )
+                        }
+
+                    log.trace { "acking the commit back to flow: ${ack.commitAck}" }
+                    ack.commitAck.send(Unit)
+                }
             }
-            commit(it)
-
-            log.trace { "acking the commit back to flow" }
-            it.commitAck.send(Unit)
-        } while (latch.count > 0)
+        } while (latch.get() > 0)
+        log.debug { "postProcessPollSet(tp:$topicPartition count:${records.size}) complete" }
     }
 }
 
@@ -253,24 +282,14 @@ internal class KafkaAckConsumerChannel<K, V>(
 abstract class KafkaConsumerChannel<K, V, R>(
     consumerProperties: Map<String, Any>,
     topics: Set<String> = emptySet(),
-    name: String = "kafka-channel",
     bufferCapacity: Int = consumerProperties.maxPollBufferCapacity,
     private val pollInterval: Duration = DEFAULT_POLL_INTERVAL,
     private val consumer: Consumer<K, V> = KafkaConsumer(consumerProperties),
+    private val scope: CoroutineScope,
     private val init: Consumer<K, V>.() -> Unit = { subscribe(topics) },
 ) : ReceiveChannel<List<R>> {
-    companion object {
-        private val threadCounter = AtomicInteger(0)
-    }
-
     protected val log = KotlinLogging.logger {}
-    private val thread =
-        thread(
-            name = "$name-${threadCounter.getAndIncrement()}",
-            block = { run() },
-            isDaemon = true,
-            start = false
-        )
+
     private val sendChannel = Channel<List<R>>(capacity = bufferCapacity)
     private fun <K, V> Consumer<K, V>.poll(duration: Duration) = poll(duration.toJavaDuration())
 
@@ -307,7 +326,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
         runBlocking {
             log.info { "${coroutineContext.job} running consumer ${consumer.subscription()}" }
             try {
-                while (!sendChannel.isClosedForSend) {
+                while (alive && !sendChannel.isClosedForSend) {
                     log.trace { "poll(topics:${consumer.subscription()}) ..." }
                     val polled =
                         consumer.poll(Duration.ZERO).ifEmpty { consumer.poll(pollInterval) }
@@ -316,12 +335,19 @@ abstract class KafkaConsumerChannel<K, V, R>(
                         continue
                     }
 
-                    log.trace { "poll(topics:${consumer.subscription()}) got $polledCount records." }
+                    log.trace {
+                        "poll(topics:${consumer.subscription()}) got $polledCount records."
+                    }
 
                     // Convert to internal types.
                     val context = mutableMapOf<String, Any>()
                     val polledPartitions = polled.partitions()
                     val preSet = polledPartitions.map { it to polled.records(it) }
+                    preSet.onEach {
+                        log.trace {
+                            "  * ${it.first}  ->  ${it.second.map { it.offset() }.scrunched() }"
+                        }
+                    }
                     val inflightSet =
                         preSet.map { (tp, records) ->
                             tp to preProcessPollSet(tp, records, context)
@@ -335,6 +361,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
                 }
             } finally {
                 log.info { "${coroutineContext.job} shutting down consumer thread" }
+                alive = false
                 try {
                     sendChannel.cancel(CancellationException("consumer shut down"))
                     consumer.unsubscribe()
@@ -344,19 +371,21 @@ abstract class KafkaConsumerChannel<K, V, R>(
                         "Consumer failed to be closed. It may have been closed from somewhere else."
                     }
                 }
+                log.info { "${coroutineContext.job} consumer thread shutdown complete" }
             }
         }
     }
 
-    fun start() {
-        if (!thread.isAlive) {
-            synchronized(thread) {
-                if (!thread.isAlive) {
-                    log.info { "starting consumer thread" }
-                    thread.start()
-                }
-            }
+    @Volatile
+    private var alive = false
+
+    fun startIn(scope: CoroutineScope) {
+        if (alive) {
+            return
         }
+        log.info { "starting consumer thread" }
+        scope.launch { run() }
+        alive = true
     }
 
     @ExperimentalCoroutinesApi
@@ -365,13 +394,13 @@ abstract class KafkaConsumerChannel<K, V, R>(
     @ExperimentalCoroutinesApi override val isEmpty: Boolean = sendChannel.isEmpty
     override val onReceive: SelectClause1<List<R>>
         get() {
-            start()
+            startIn(scope)
             return sendChannel.onReceive
         }
 
     override val onReceiveCatching: SelectClause1<ChannelResult<List<R>>>
         get() {
-            start()
+            startIn(scope)
             return sendChannel.onReceiveCatching
         }
 
@@ -390,22 +419,29 @@ abstract class KafkaConsumerChannel<K, V, R>(
     }
 
     override fun iterator(): ChannelIterator<List<R>> {
-        start()
+        startIn(scope)
         return sendChannel.iterator()
     }
 
     override suspend fun receive(): List<R> {
-        start()
+        startIn(scope)
         return sendChannel.receive()
     }
 
     override suspend fun receiveCatching(): ChannelResult<List<R>> {
-        start()
+        startIn(scope)
         return sendChannel.receiveCatching()
     }
 
     override fun tryReceive(): ChannelResult<List<R>> {
-        start()
+        startIn(scope)
         return sendChannel.tryReceive()
     }
 }
+
+fun <T> List<T>.scrunched(): String =
+    if (size <= 5) {
+        toString()
+    } else {
+        (take(3) + "..." + last()).toString() + " (len:$size)"
+    }

@@ -7,6 +7,7 @@ import tech.figure.coroutines.retry.tryOnEachProcess
 import tech.figure.coroutines.tryOnEach
 import tech.figure.kafka.coroutines.retry.flow.lifted
 import tech.figure.kafka.records.UnAckedConsumerRecord
+import tech.figure.kafka.records.UnAckedConsumerRecords
 
 /**
  * Kafka specific implementation of [tryOnEach] to lift the [UnAckedConsumerRecord] into a basic [ConsumerRecord] for processing.
@@ -14,6 +15,6 @@ import tech.figure.kafka.records.UnAckedConsumerRecord
  * @param flowProcessor The [FlowProcessor] to use for processing the stream of records.
  * @return The original flow.
  */
-fun <K, V> Flow<List<UnAckedConsumerRecord<K, V>>>.tryOnEach(
+fun <K, V> Flow<UnAckedConsumerRecords<K, V>>.tryOnEach(
     flowProcessor: FlowProcessor<List<ConsumerRecord<K, V>>>
-): Flow<List<UnAckedConsumerRecord<K, V>>> = tryOnEachProcess(flowProcessor.lifted())
+): Flow<UnAckedConsumerRecords<K, V>> = tryOnEachProcess(flowProcessor.lifted())
