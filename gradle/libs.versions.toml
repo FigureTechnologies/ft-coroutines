@@ -1,5 +1,5 @@
 [versions]
-kafka = "3.3.2"
+kafka = "3.4.0"
 kotlinxCore = "1.6.4"
 kotlinxCli = "0.3.5"
 kotlinxDateTime = "0.3.0"
