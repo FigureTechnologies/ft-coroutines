@@ -6,7 +6,7 @@ import tech.figure.coroutines.retry.store.RetryRecord
 import tech.figure.coroutines.retry.store.RetryRecordStore
 
 fun <K, V> inMemoryConsumerRecordStore(
-    data: MutableList<RetryRecord<List<ConsumerRecord<K, V>>>> = mutableListOf()
+    data: MutableList<RetryRecord<List<ConsumerRecord<K, V>>>> = mutableListOf(),
 ) =
     object : RetryRecordStore<List<ConsumerRecord<K, V>>> {
         override suspend fun isEmpty(): Boolean = data.isEmpty()
@@ -23,7 +23,7 @@ fun <K, V> inMemoryConsumerRecordStore(
         }
 
         override suspend fun get(
-            item: List<ConsumerRecord<K, V>>
+            item: List<ConsumerRecord<K, V>>,
         ): RetryRecord<List<ConsumerRecord<K, V>>>? {
             return data.firstOrNull(recordMatches(item))
         }
@@ -49,7 +49,7 @@ fun <K, V> inMemoryConsumerRecordStore(
         }
 
         private fun <K, V> recordMatches(
-            other: List<ConsumerRecord<K, V>>
+            other: List<ConsumerRecord<K, V>>,
         ): (RetryRecord<List<ConsumerRecord<K, V>>>) -> Boolean {
             return { it == other }
         }

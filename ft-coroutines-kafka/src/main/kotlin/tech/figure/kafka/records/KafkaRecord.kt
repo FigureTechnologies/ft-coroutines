@@ -37,7 +37,7 @@ interface KafkaRecord<K, V> {
             key,
             value,
             RecordHeaders(headers),
-            leaderEpoch.toOptional()
+            leaderEpoch.toOptional(),
         )
     }
 }
@@ -59,5 +59,8 @@ internal fun <K, V> wrapping(consumerRecord: ConsumerRecord<K, V>): KafkaRecord<
 }
 
 private fun <T : Any> T?.toOptional(): Optional<T> =
-    if (this == null) Optional.empty()
-    else Optional.of(this)
+    if (this == null) {
+        Optional.empty()
+    } else {
+        Optional.of(this)
+    }

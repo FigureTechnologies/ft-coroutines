@@ -69,12 +69,12 @@ fun <K, V> kafkaConsumerChannel(
         pollInterval,
         consumer,
         rebalanceListener,
-        init
+        init,
     )
 
 private fun <K, V> noAckConsumerInit(
     topics: Set<String>,
-    seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit
+    seekTopicPartitions: Consumer<K, V>.(List<TopicPartition>) -> Unit,
 ): (Consumer<K, V>) -> Unit = { consumer ->
     val tps =
         topics.flatMap {
@@ -118,7 +118,7 @@ fun <K, V> kafkaNoAckConsumerChannel(
         override suspend fun preProcessPollSet(
             topicPartition: TopicPartition,
             records: List<ConsumerRecord<K, V>>,
-            context: MutableMap<String, Any>
+            context: MutableMap<String, Any>,
         ): List<ConsumerRecord<K, V>> {
             return records
         }
@@ -154,7 +154,7 @@ fun <K, V> kafkaAckConsumerChannel(
         bufferCapacity,
         pollInterval,
         consumer,
-        init
+        init,
     ).also { Runtime.getRuntime().addShutdownHook(Thread { it.cancel() }) }
 }
 
@@ -178,7 +178,7 @@ internal class KafkaAckConsumerChannel<K, V>(
     bufferCapacity: Int,
     pollInterval: Duration,
     consumer: Consumer<K, V>,
-    init: Consumer<K, V>.() -> Unit
+    init: Consumer<K, V>.() -> Unit,
 ) :
     KafkaConsumerChannel<K, V, UnAckedConsumerRecord<K, V>>(
         consumerProperties,
@@ -187,7 +187,7 @@ internal class KafkaAckConsumerChannel<K, V>(
         bufferCapacity,
         pollInterval,
         consumer,
-        init
+        init,
     ) {
     override suspend fun preProcessPollSet(
         topicPartition: TopicPartition,
@@ -209,7 +209,7 @@ internal class KafkaAckConsumerChannel<K, V>(
     override suspend fun postProcessPollSet(
         topicPartition: TopicPartition,
         records: List<UnAckedConsumerRecord<K, V>>,
-        context: Map<String, Any>
+        context: Map<String, Any>,
     ) {
         log.trace { "postProcessPollSet(tp:$topicPartition count:${records.size})" }
         val ackChannel = context["ack-channel-$topicPartition"]!! as ReceiveChannel<CommitConsumerRecord>
@@ -269,7 +269,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
             name = "$name-${threadCounter.getAndIncrement()}",
             block = { run() },
             isDaemon = true,
-            start = false
+            start = false,
         )
     private val sendChannel = Channel<List<R>>(capacity = bufferCapacity)
     private fun <K, V> Consumer<K, V>.poll(duration: Duration) = poll(duration.toJavaDuration())
@@ -280,13 +280,13 @@ abstract class KafkaConsumerChannel<K, V, R>(
     protected abstract suspend fun preProcessPollSet(
         topicPartition: TopicPartition,
         records: List<ConsumerRecord<K, V>>,
-        context: MutableMap<String, Any>
+        context: MutableMap<String, Any>,
     ): List<R>
 
     protected open suspend fun postProcessPollSet(
         topicPartition: TopicPartition,
         records: List<R>,
-        context: Map<String, Any>
+        context: Map<String, Any>,
     ) {
         /* no-op */
     }
@@ -377,7 +377,7 @@ abstract class KafkaConsumerChannel<K, V, R>(
 
     @Deprecated(
         "Since 1.2.0, binary compatibility with versions <= 1.1.x",
-        level = DeprecationLevel.HIDDEN
+        level = DeprecationLevel.HIDDEN,
     )
     override fun cancel(cause: Throwable?): Boolean {
         cancel(CancellationException("cancel", cause))

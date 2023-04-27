@@ -30,3 +30,19 @@ include("ft-coroutines-core")
 include("ft-coroutines-retry")
 include("ft-coroutines-kafka")
 include("ft-coroutines-kafka-retry")
+
+plugins {
+    id("org.danilopianini.gradle-pre-commit-git-hooks") version "1.1.6"
+}
+
+gitHooks {
+    preCommit {
+        from {
+            """
+                echo "Running pre-commit ktlint check"
+                ./gradlew ktlintCheck
+            """.trimIndent()
+        }
+    }
+    createHooks()
+}

@@ -78,7 +78,7 @@ open class KafkaFlowRetry<K, V>(
 
     private fun <K, V> ConsumerRecord<K, V>.setHeader(
         key: String,
-        value: ByteArray
+        value: ByteArray,
     ): ConsumerRecord<K, V> = apply {
         fun Headers.addOrUpdate(header: Header): Headers {
             val h = find { it.key() == header.key() }
