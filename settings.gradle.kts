@@ -3,6 +3,7 @@ rootProject.name = "ft-coroutines"
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        mavenCentral()
     }
 }
 
