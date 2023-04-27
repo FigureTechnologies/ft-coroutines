@@ -18,5 +18,5 @@ fun <T> Flow<T>.tryOnEachProcess(flowProcessor: FlowProcessor<T>): Flow<T> = try
     },
     tryBlock = {
         flowProcessor.process(it)
-    }
+    },
 )

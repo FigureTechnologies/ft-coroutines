@@ -9,7 +9,7 @@ interface AckedConsumerRecord<K, V> : KafkaRecord<K, V> {
 
 class AckedConsumerRecordImpl<K, V>(
     record: ConsumerRecord<K, V>,
-    override val metadata: OffsetAndMetadata
+    override val metadata: OffsetAndMetadata,
 ) : AckedConsumerRecord<K, V>, KafkaRecord<K, V> by wrapping(record)
 
 typealias AckedConsumerRecords<K, V> = List<AckedConsumerRecord<K, V>>

@@ -29,7 +29,7 @@ class TestRetryFlow : AnnotationSpec() {
             queue = list.asChannel(),
             onSuccess = onSuccess,
             onFailure = onFailure,
-            block = block
+            block = block,
         )
     }
 
@@ -52,7 +52,7 @@ class TestRetryFlow : AnnotationSpec() {
             listOf(RetryRecord(1), RetryRecord(2), RetryRecord(3)),
             { },
             { fail("should not be called") },
-            { _, _ -> }
+            { _, _ -> },
         )
 
         assert(flow.drain().size == 3) { "not all elements produced" }

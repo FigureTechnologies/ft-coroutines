@@ -29,7 +29,7 @@ interface UnAckedConsumerRecord<K, V> : KafkaRecord<K, V> {
 class UnAckedConsumerRecordImpl<K, V>(
     private val record: ConsumerRecord<K, V>,
     private val channel: SendChannel<CommitConsumerRecord>,
-    private val start: Long
+    private val start: Long,
 ) : UnAckedConsumerRecord<K, V>, KafkaRecord<K, V> by wrapping(record) {
 
     override suspend fun ack(): AckedConsumerRecord<K, V> {

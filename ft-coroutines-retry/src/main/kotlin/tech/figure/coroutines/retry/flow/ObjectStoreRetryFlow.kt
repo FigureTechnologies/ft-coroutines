@@ -37,7 +37,7 @@ internal open class RecordStoreFlowRetry<T>(
     override suspend fun produceNext(
         attemptRange: IntRange,
         olderThan: OffsetDateTime,
-        limit: Int
+        limit: Int,
     ): Flow<RetryRecord<T>> =
         store
             .select(attemptRange, olderThan, limit)

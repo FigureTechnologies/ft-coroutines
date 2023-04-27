@@ -17,7 +17,7 @@ fun <T> Flow<T>.tryOnEach(
 ): Flow<T> = onEach { value: T ->
     runCatching { tryBlock(value) }.fold(
         onSuccess = { },
-        onFailure = { onFailure(value, it) }
+        onFailure = { onFailure(value, it) },
     )
 }
 

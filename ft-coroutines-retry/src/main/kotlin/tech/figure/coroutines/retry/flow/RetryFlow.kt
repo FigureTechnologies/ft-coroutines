@@ -31,7 +31,7 @@ fun <T> retryFlow(
     flowRetry: FlowRetry<T>,
     retryInterval: Duration = DEFAULT_RETRY_INTERVAL,
     batchSize: Int = DEFAULT_FETCH_LIMIT,
-    retryStrategies: List<RetryStrategy> = defaultRetryStrategies
+    retryStrategies: List<RetryStrategy> = defaultRetryStrategies,
 ): Flow<T> {
     val log = KotlinLogging.logger {}
     val strategies = retryStrategies.invert()

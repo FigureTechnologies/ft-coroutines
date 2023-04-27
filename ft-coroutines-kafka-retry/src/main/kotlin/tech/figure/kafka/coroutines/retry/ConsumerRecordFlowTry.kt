@@ -15,5 +15,5 @@ import tech.figure.kafka.records.UnAckedConsumerRecord
  * @return The original flow.
  */
 fun <K, V> Flow<List<UnAckedConsumerRecord<K, V>>>.tryOnEach(
-    flowProcessor: FlowProcessor<List<ConsumerRecord<K, V>>>
+    flowProcessor: FlowProcessor<List<ConsumerRecord<K, V>>>,
 ): Flow<List<UnAckedConsumerRecord<K, V>>> = tryOnEachProcess(flowProcessor.lifted())

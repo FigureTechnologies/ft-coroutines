@@ -26,7 +26,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
  */
 fun <K, V> kafkaProducerChannel(
     producerProps: Map<String, Any>,
-    producer: Producer<K, V> = KafkaProducer(producerProps)
+    producer: Producer<K, V> = KafkaProducer(producerProps),
 ): SendChannel<ProducerRecord<K, V>> = KafkaProducerChannel(producer)
 
 /**
@@ -52,7 +52,7 @@ open class KafkaProducerChannel<K, V>(private val producer: Producer<K, V>) : Se
                 override fun <R> registerSelectClause2(
                     select: SelectInstance<R>,
                     param: ProducerRecord<K, V>,
-                    block: suspend (SendChannel<ProducerRecord<K, V>>) -> R
+                    block: suspend (SendChannel<ProducerRecord<K, V>>) -> R,
                 ) {
                     if (!select.isSelected) {
                         return
