@@ -4,9 +4,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.record.TimestampType
 import tech.figure.kafka.records.KafkaRecord
 import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
 
 /**
  * All valid timestamp type values that can be produced by Kafka to indicate a proper record timestamp.
@@ -20,35 +17,19 @@ private val VALID_TIMESTAMP_TYPES: Set<TimestampType> = setOf(
  * Fetches a valid Instant representation for the Kafka record, with regard to the valid timestamp types in the
  * encountered data.
  */
-fun <K, V> ConsumerRecord<K, V>.timestampToInstant(): Instant = getKafkaTimestampInstant(
+fun <K, V> ConsumerRecord<K, V>.timestampAsInstant(): Instant = getKafkaTimestampInstant(
     timestampType = timestampType(),
     millis = timestamp(),
 )
 
 /**
- * Fetches a valid OffsetDateTime representation for the Kafka record, with regard to the valid timestamp types in the
- * encountered data.
- */
-fun <K, V> ConsumerRecord<K, V>.timestampToOffsetDateTime(
-    zone: ZoneId = ZoneOffset.systemDefault(),
-): OffsetDateTime = OffsetDateTime.ofInstant(this.timestampToInstant(), zone)
-
-/**
  * Fetches a valid Instant representation for the Kafka record, with regard to the valid timestamp types in the
  * encountered data.
  */
-fun <K, V> KafkaRecord<K, V>.timestampToInstant(): Instant = getKafkaTimestampInstant(
+fun <K, V> KafkaRecord<K, V>.timestampAsInstant(): Instant = getKafkaTimestampInstant(
     timestampType = timestampType,
     millis = timestamp,
 )
-
-/**
- * Fetches a valid OffsetDateTime representation for the Kafka record, with regard to the valid timestamp types in the
- * encountered data.
- */
-fun <K, V> KafkaRecord<K, V>.timestampToOffsetDateTime(
-    zone: ZoneId = ZoneOffset.systemDefault(),
-): OffsetDateTime = OffsetDateTime.ofInstant(this.timestampToInstant(), zone)
 
 private fun getKafkaTimestampInstant(
     timestampType: TimestampType,
