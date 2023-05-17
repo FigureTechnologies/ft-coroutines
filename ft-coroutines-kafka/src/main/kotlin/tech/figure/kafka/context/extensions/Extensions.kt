@@ -11,7 +11,7 @@ import java.time.ZoneOffset
 /**
  * All valid timestamp type values that can be produced by Kafka to indicate a proper record timestamp.
  */
-private val VALID_ODT_TIMESTAMP_TYPES: Set<TimestampType> = setOf(
+private val VALID_TIMESTAMP_TYPES: Set<TimestampType> = setOf(
     TimestampType.CREATE_TIME,
     TimestampType.LOG_APPEND_TIME,
 )
@@ -53,7 +53,7 @@ fun <K, V> KafkaRecord<K, V>.timestampToOffsetDateTime(
 private fun getKafkaTimestampInstant(
     timestampType: TimestampType,
     millis: Long,
-): Instant = if (timestampType in VALID_ODT_TIMESTAMP_TYPES) {
+): Instant = if (timestampType in VALID_TIMESTAMP_TYPES) {
     Instant.ofEpochMilli(millis)
 } else {
     error("Unexpected timestamp type [$timestampType] with millis [$millis]")
