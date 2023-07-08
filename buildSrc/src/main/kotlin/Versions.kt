@@ -4,7 +4,7 @@ object Versions {
         const val DateTime = "0.4.0"
     }
 
-    const val Kotest = "5.5.4"
+    const val Kotest = "5.6.2"
     const val KotlinLogging = "3.0.4"
     const val Kafka = "3.3.1"
 }
