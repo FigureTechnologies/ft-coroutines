@@ -1,7 +1,7 @@
 object Versions {
     object Kotlinx {
         const val Core = "1.6.4"
-        const val DateTime = "0.4.0"
+        const val DateTime = "0.5.0"
     }
 
     const val Kotest = "5.6.2"
