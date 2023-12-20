@@ -32,7 +32,7 @@ include("ft-coroutines-kafka")
 include("ft-coroutines-kafka-retry")
 
 plugins {
-    id("org.danilopianini.gradle-pre-commit-git-hooks") version "1.1.9"
+    id("org.danilopianini.gradle-pre-commit-git-hooks") version "1.1.16"
 }
 
 gitHooks {

@@ -1,10 +1,12 @@
 [versions]
-kafka = "3.5.0"
+kafka = "3.6.1"
+# Don't update, 1.7+ changes an extended class to sealed which breaks
 kotlinxCore = "1.6.4"
-kotlinxCli = "0.3.5"
+
+kotlinxCli = "0.3.6"
 kotlinxDateTime = "0.3.0"
 kotlinLogging = "3.0.5"
-logback = "1.4.8"
+logback = "1.4.14"
 slf4jApi = "2.0.7"
 
 pluginNexusPublishPlugin = "1.3.0"
