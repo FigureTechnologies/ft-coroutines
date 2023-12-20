@@ -1,7 +1,7 @@
 [versions]
 kafka = "3.6.1"
 # Don't update, 1.7+ changes an extended class to sealed which breaks
-kotlinxCore = "1.6.4"
+kotlinxCore = "1.7.3"
 
 kotlinxCli = "0.3.6"
 kotlinxDateTime = "0.3.0"
